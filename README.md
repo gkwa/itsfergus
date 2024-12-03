@@ -14,7 +14,6 @@ just curl-test
 just logs
 ```
 
-
 ## Example Output
 
 ```bash
