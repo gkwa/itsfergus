@@ -29,10 +29,6 @@ just logs
 }
 ```
 
-
-
-
-
 ## Teardown
 
 ```bash
@@ -45,7 +41,6 @@ just teardown
 - [curl](https://github.com/curl/curl)
 - [docker](https://github.com/docker/docker-ce)
 - [just](https://github.com/casey/just)
-- [pip](https://github.com/pypa/pip)
 - [ruff](https://github.com/astral-sh/ruff)
 - [terraform](https://github.com/hashicorp/terraform)
 - [uv](https://github.com/astral-sh/uv)
