@@ -116,6 +116,7 @@ cleanup:
     rm -f tfplan destroy.tfplan .env
 
 fmt:
+    prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
     ruff format .
     ruff check --fix
     terraform fmt -recursive .
