@@ -23,6 +23,17 @@ build:
 push:
     #!/usr/bin/env bash
     set -xeuo pipefail
+
+
+    if [ -f .env ]; then
+        set -a
+        source .env
+        set +a
+    fi
+
+
+
+
     REPO_URL=$(terraform output -raw ecr_repository_url)
     aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin $REPO_URL
     docker tag lambda-docker:latest $REPO_URL:latest
@@ -50,6 +61,16 @@ destroy-plan:
 destroy-apply: destroy-plan
     terraform apply destroy.tfplan
 
+get-creds-key:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -x
+
+    cat << EOF >.env
+    API_KEY=$(terraform output -raw api_key)
+    API_URL=$(terraform output -raw api_gateway_url)
+    EOF
+
 get-creds-iam:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -60,20 +81,14 @@ get-creds-iam:
 
     export CREDS=$(aws sts assume-role --role-arn $API_INVOCATION_ROLE --role-session-name test-session)
 
-    echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >.env
-    echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> .env
-    echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
-    echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
-    echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
-    echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
-
-get-creds-key:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
-
-    echo "API_KEY=$(terraform output -raw api_key)" >.env
-    echo "API_URL=$(terraform output -raw api_gateway_url)" >>.env
+    cat << EOF >.env
+    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)
+    AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)
+    AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)
+    AWS_REGION=$(terraform output -raw aws_region)
+    API_URL=$(terraform output -raw api_gateway_url)
+    EOF
 
 get-creds:
     #!/usr/bin/env bash
@@ -88,24 +103,32 @@ curl-test-iam: get-creds-iam
     set -euo pipefail
     set -x
 
-    set -a # make env vars avail to subprocesses
-    source .env
-    set +a
+    if [ -f .env ]; then
+             set -a
+             source .env
+             set +a
+    fi
+
     uv sync
     . .venv/bin/activate
-    python apitest_iam.py
+
+    recur --condition 'code == 0 or (total_time > 300 and exit(1))' python apitest_iam.py
 
 curl-test-key: get-creds-key
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
 
-    set -a # make env vars avail to subprocesses
-    source .env
-    set +a
+    if [ -f .env ]; then
+        set -a
+        source .env
+        set +a
+    fi
+
     uv sync
     . .venv/bin/activate
-    python apitest_key.py
+
+    recur --condition 'code == 0 or (total_time > 300 and exit(1))' python apitest_key.py
 
 curl-test:
     #!/usr/bin/env bash
