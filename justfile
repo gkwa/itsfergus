@@ -7,7 +7,13 @@ auth_type := env_var_or_default("AUTH_TYPE", "iam")
 default:
     @just --list
 
-setup: deploy curl-test
+setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Setting up with auth_type={{ auth_type }}"
+    export AUTH_TYPE={{ auth_type }}
+    just deploy
+    just curl-test
 
 teardown: destroy-plan destroy-apply
 
