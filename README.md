@@ -32,6 +32,7 @@ just logs # check cloudwatch logs
 
 ```bash
 just teardown
+rm -f .env
 ```
 
 ## Dependencies

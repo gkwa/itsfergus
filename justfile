@@ -49,7 +49,67 @@ _load-env:
         echo "Creating .env file..."
         echo "API_KEY=$(terraform output -raw api_key_value)" > .env
         echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
+        echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
     fi
+
+rotate-api-key:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -x
+
+    if [[ ! -f .env ]]; then
+        just _load-env
+    fi
+
+    set -a
+    source .env
+    set +a
+
+    # Create new API key
+    NEW_KEY=$(aws apigateway create-api-key \
+      --name "lambda-api-key-$(date +%Y%m%d)" \
+      --enabled \
+      --query 'value' \
+      --output text \
+      --region "${AWS_REGION}")
+
+    # Get usage plan id
+    USAGE_PLAN_ID=$(aws apigateway get-usage-plans \
+      --query 'items[?name==`lambda-usage-plan`].id' \
+      --output text \
+      --region "${AWS_REGION}")
+
+    # Get old key id from usage plan
+    OLD_KEY_ID=$(aws apigateway get-usage-plan-keys \
+      --usage-plan-id "$USAGE_PLAN_ID" \
+      --query 'items[0].id' \
+      --output text \
+      --region "${AWS_REGION}")
+
+    # Create usage plan key for new API key
+    NEW_KEY_ID=$(aws apigateway get-api-key \
+      --api-key "$NEW_KEY" \
+      --query 'id' \
+      --output text \
+      --region "${AWS_REGION}")
+
+    aws apigateway create-usage-plan-key \
+      --usage-plan-id "$USAGE_PLAN_ID" \
+      --key-id "$NEW_KEY_ID" \
+      --key-type "API_KEY" \
+      --region "${AWS_REGION}"
+
+    # Delete old usage plan key
+    aws apigateway delete-usage-plan-key \
+      --usage-plan-id "$USAGE_PLAN_ID" \
+      --key-id "$OLD_KEY_ID" \
+      --region "${AWS_REGION}"
+
+    # Update .env with new key
+    sed -i.bak "s/^API_KEY=.*/API_KEY=${NEW_KEY}/" .env
+    rm -f .env.bak
+
+    echo "API key rotated successfully. New key is in .env file."
 
 curl-test:
     #!/usr/bin/env bash
