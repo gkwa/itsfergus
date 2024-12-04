@@ -8,10 +8,10 @@ The Lambda function generates and returns random matrix using NumPy as a dummy e
 
 ```bash
 just # show default rules
-just setup
-sleep 20s # wait for resources to be ready, TODO: fix me
+just setup 2>&1 | tee log.txt
+python3 redact.py log.txt >log_redacted.txt
 just curl-test
-just logs
+just logs # check cloudwatch logs
 ```
 
 ## Example Output

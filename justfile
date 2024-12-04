@@ -6,7 +6,7 @@ aws_region := env_var_or_default("AWS_REGION", "ca-central-1")
 default:
     @just --list
 
-setup: deploy curl-test cleanup
+setup: deploy curl-test
 
 teardown: destroy-plan destroy-apply
 
@@ -43,23 +43,31 @@ destroy-plan:
 destroy-apply: destroy-plan
     terraform apply destroy.tfplan
 
-curl-test:
+get-creds:
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
 
     export API_INVOCATION_ROLE=$(terraform output -raw api_invocation_role_arn)
-    echo "Testing API Gateway..."
+    echo "Getting temporary credentials..."
 
-    # Get temporary credentials
     export CREDS=$(aws sts assume-role --role-arn $API_INVOCATION_ROLE --role-session-name test-session)
 
-    export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)
-    export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)
-    export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)
-    export AWS_REGION=$(terraform output -raw aws_region)
-    export API_URL=$(terraform output -raw api_gateway_url) 
+    echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >.env
+    echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> .env
+    echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
+    echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
+    echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
+    echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
 
+curl-test: get-creds
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -x
+
+    set -a # make env vars avail to subprocesses
+    source .env
+    set +a
     uv sync
     . .venv/bin/activate
     python apitest.py
@@ -72,7 +80,7 @@ logs:
     aws logs tail /aws/lambda/$FUNCTION_NAME --follow --region {{ aws_region }}
 
 cleanup:
-    rm -f tfplan destroy.tfplan
+    rm -f tfplan destroy.tfplan .env
 
 fmt:
     ruff format .
