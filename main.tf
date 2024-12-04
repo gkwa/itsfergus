@@ -19,4 +19,3 @@ module "auth_key" {
   aws_lambda_function_name = var.lambda_function_name
   aws_region               = var.aws_region
 }
-

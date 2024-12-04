@@ -33,4 +33,3 @@ resource "aws_iam_role_policy" "api_invocation_policy" {
     ]
   })
 }
-

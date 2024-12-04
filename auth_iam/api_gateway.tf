@@ -56,4 +56,3 @@ resource "aws_apigatewayv2_route" "lambda_route" {
   target             = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
   authorization_type = "AWS_IAM"
 }
-

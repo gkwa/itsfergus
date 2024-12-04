@@ -76,4 +76,3 @@ resource "aws_api_gateway_usage_plan_key" "lambda_usage_plan_key" {
   key_type      = "API_KEY"
   usage_plan_id = aws_api_gateway_usage_plan.lambda_usage_plan.id
 }
-

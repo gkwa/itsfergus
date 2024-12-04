@@ -26,4 +26,3 @@ variable "lambda_function_name" {
   type        = string
   default     = "docker-lambda-function"
 }
-
