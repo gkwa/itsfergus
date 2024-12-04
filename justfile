@@ -100,7 +100,11 @@ curl-test-key: get-creds-key
     set -euo pipefail
     set -x
 
+    set -a # make env vars avail to subprocesses
     source .env
+    set +a
+    uv sync
+    . .venv/bin/activate
     python apitest_key.py
 
 curl-test:
