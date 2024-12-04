@@ -43,34 +43,47 @@ destroy-plan:
 destroy-apply: destroy-plan
     terraform apply destroy.tfplan
 
-get-creds:
+_load-env:
+    #!/usr/bin/env bash
+    if [[ ! -f .env ]]; then
+        echo "Creating .env file..."
+        echo "API_KEY=$(terraform output -raw api_key_value)" > .env
+        echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
+    fi
+
+curl-test:
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
 
-    export API_INVOCATION_ROLE=$(terraform output -raw api_invocation_role_arn)
-    echo "Getting temporary credentials..."
+    if [[ ! -f .env ]]; then
+        just _load-env
+    fi
 
-    export CREDS=$(aws sts assume-role --role-arn $API_INVOCATION_ROLE --role-session-name test-session)
-
-    echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >.env
-    echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> .env
-    echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
-    echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
-    echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
-    echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
-
-curl-test: get-creds
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
-
-    set -a # make env vars avail to subprocesses
+    set -a
     source .env
     set +a
+
     uv sync
     . .venv/bin/activate
     python apitest.py
+
+curl-raw:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -x
+
+    if [[ ! -f .env ]]; then
+        just _load-env
+    fi
+
+    set -a
+    source .env
+    set +a
+
+    curl  "${API_URL}" \
+      -H "x-api-key: ${API_KEY}" \
+      -H "Content-Type: application/json"
 
 logs:
     #!/usr/bin/env bash
