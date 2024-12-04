@@ -87,7 +87,7 @@ curl-test-iam: get-creds-iam
     set +a
     uv sync
     . .venv/bin/activate
-    python apitest.py
+    python apitest_iam.py
 
 curl-test-key: get-creds-key
     #!/usr/bin/env bash
@@ -95,7 +95,7 @@ curl-test-key: get-creds-key
     set -x
 
     source .env
-    curl -H "x-api-key: $API_KEY" "$API_URL"
+    python apitest_key.py
 
 curl-test:
     #!/usr/bin/env bash
