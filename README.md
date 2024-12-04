@@ -8,7 +8,7 @@ The Lambda function generates and returns random matrix using NumPy as a dummy e
 
 ```bash
 just # show default rules
-just setup 2>&1 | tee log.txt
+time just setup 2>&1 | tee log.txt
 python3 redact.py log.txt >log_redacted.txt
 just curl-test
 just logs # check cloudwatch logs
