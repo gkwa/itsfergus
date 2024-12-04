@@ -2,6 +2,7 @@ set shell := ["bash", "-xuc"]
 set export := true
 
 aws_region := env_var_or_default("AWS_REGION", "ca-central-1")
+auth_type := env_var_or_default("AUTH_TYPE", "iam")
 
 default:
     @just --list
@@ -22,7 +23,7 @@ push:
     docker push $REPO_URL:latest
 
 plan:
-    terraform plan -out=tfplan -var="aws_region={{ aws_region }}"
+    terraform plan -out=tfplan -var="aws_region={{ aws_region }}" -var="auth_type={{ auth_type }}"
 
 apply:
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo
@@ -38,112 +39,71 @@ init:
     terraform init -no-color
 
 destroy-plan:
-    terraform plan -destroy -out=destroy.tfplan -var="aws_region={{ aws_region }}"
+    terraform plan -destroy -out=destroy.tfplan -var="aws_region={{ aws_region }}" -var="auth_type={{ auth_type }}"
 
 destroy-apply: destroy-plan
     terraform apply destroy.tfplan
 
-_load-env:
-    #!/usr/bin/env bash
-    if [[ ! -f .env ]]; then
-        echo "Creating .env file..."
-        echo "API_KEY=$(terraform output -raw api_key_value)" > .env
-        echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
-        echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
-    fi
-
-rotate-api-key:
+get-creds-iam:
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
 
-    if [[ ! -f .env ]]; then
-        just _load-env
-    fi
+    export API_INVOCATION_ROLE=$(terraform output -raw api_invocation_role_arn)
+    echo "Getting temporary credentials..."
 
-    set -a
-    source .env
-    set +a
+    export CREDS=$(aws sts assume-role --role-arn $API_INVOCATION_ROLE --role-session-name test-session)
 
-    # Create new API key
-    NEW_KEY=$(aws apigateway create-api-key \
-      --name "lambda-api-key-$(date +%Y%m%d)" \
-      --enabled \
-      --query 'value' \
-      --output text \
-      --region "${AWS_REGION}")
+    echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >.env
+    echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> .env
+    echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
+    echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
+    echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
+    echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
 
-    # Get usage plan id
-    USAGE_PLAN_ID=$(aws apigateway get-usage-plans \
-      --query 'items[?name==`lambda-usage-plan`].id' \
-      --output text \
-      --region "${AWS_REGION}")
-
-    # Get old key id from usage plan
-    OLD_KEY_ID=$(aws apigateway get-usage-plan-keys \
-      --usage-plan-id "$USAGE_PLAN_ID" \
-      --query 'items[0].id' \
-      --output text \
-      --region "${AWS_REGION}")
-
-    # Create usage plan key for new API key
-    NEW_KEY_ID=$(aws apigateway get-api-key \
-      --api-key "$NEW_KEY" \
-      --query 'id' \
-      --output text \
-      --region "${AWS_REGION}")
-
-    aws apigateway create-usage-plan-key \
-      --usage-plan-id "$USAGE_PLAN_ID" \
-      --key-id "$NEW_KEY_ID" \
-      --key-type "API_KEY" \
-      --region "${AWS_REGION}"
-
-    # Delete old usage plan key
-    aws apigateway delete-usage-plan-key \
-      --usage-plan-id "$USAGE_PLAN_ID" \
-      --key-id "$OLD_KEY_ID" \
-      --region "${AWS_REGION}"
-
-    # Update .env with new key
-    sed -i.bak "s/^API_KEY=.*/API_KEY=${NEW_KEY}/" .env
-    rm -f .env.bak
-
-    echo "API key rotated successfully. New key is in .env file."
-
-curl-test:
+get-creds-key:
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
 
-    if [[ ! -f .env ]]; then
-        just _load-env
+    echo "API_KEY=$(terraform output -raw api_key)" >.env
+    echo "API_URL=$(terraform output -raw api_gateway_url)" >>.env
+
+get-creds:
+    #!/usr/bin/env bash
+    if [[ "{{ auth_type }}" == "iam" ]]; then
+        just get-creds-iam
+    else
+        just get-creds-key
     fi
 
-    set -a
+curl-test-iam: get-creds-iam
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -x
+
+    set -a # make env vars avail to subprocesses
     source .env
     set +a
-
     uv sync
     . .venv/bin/activate
     python apitest.py
 
-curl-raw:
+curl-test-key: get-creds-key
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
 
-    if [[ ! -f .env ]]; then
-        just _load-env
-    fi
-
-    set -a
     source .env
-    set +a
+    curl -H "x-api-key: $API_KEY" "$API_URL"
 
-    curl  "${API_URL}" \
-      -H "x-api-key: ${API_KEY}" \
-      -H "Content-Type: application/json"
+curl-test:
+    #!/usr/bin/env bash
+    if [[ "{{ auth_type }}" == "iam" ]]; then
+        just curl-test-iam
+    else
+        just curl-test-key
+    fi
 
 logs:
     #!/usr/bin/env bash
@@ -160,3 +120,16 @@ fmt:
     ruff check --fix
     terraform fmt -recursive .
     just --unstable --fmt
+
+switch-auth:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ "{{ auth_type }}" == "iam" ]]; then
+        export AUTH_TYPE=key
+    else
+        export AUTH_TYPE=iam
+    fi
+
+    echo "Switched to $AUTH_TYPE authentication"
+    just deploy
