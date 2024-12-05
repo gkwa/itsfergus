@@ -2,6 +2,7 @@ AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
 AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
+export PATH := "~/go/bin:$PATH"
 
 default:
     @just --list
@@ -9,9 +10,9 @@ default:
 setup:
     just setup-iam
 
-setup-iam: _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam")
+setup-iam: install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam")
 
-setup-key: _tf-init-ecr _docker-build _tf-apply-key (_init-env "key")
+setup-key: install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key")
 
 destroy-iam: _tf-destroy-iam
 
@@ -20,6 +21,13 @@ destroy-key: _tf-destroy-key
 _tf-init-ecr:
     terraform init -upgrade
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo -var="auth_type=iam"
+
+install-recur:
+   #!/usr/bin/env bash
+   set -euo pipefail
+   if ! command -v recur >/dev/null 2>&1; then
+       go install github.com/dbohdan/recur/v2@latest
+   fi
 
 _docker-build:
     #!/usr/bin/env bash
@@ -69,16 +77,18 @@ _tf-destroy-key:
 teardown:
     just destroy-iam
 
-curl-test:
+
+
+curl-test: install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     set -a; source .env; set +a
     uv sync
     . .venv/bin/activate
     if [ -v API_KEY ]; then
-        python apitest_key.py
+        recur --attempts 10 --backoff 3s python apitest_key.py
     else
-        python apitest_iam.py
+        recur --attempts 10 --backoff 3s python apitest_iam.py
     fi
 
 logs:
