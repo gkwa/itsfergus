@@ -1,11 +1,24 @@
 set shell := ["bash", "-xuc"]
 set export := true
 
+export PATH := "~/go/bin:" + env_var("PATH")
 aws_region := env_var_or_default("AWS_REGION", "ca-central-1")
 auth_type := env_var_or_default("AUTH_TYPE", "iam")
 
 default:
     @just --list
+
+setup-iam:
+    just auth_type=iam setup
+
+setup-key:
+    just auth_type=key setup
+
+destroy-iam:
+    just auth_type=iam destroy-apply
+
+destroy-key:
+    just auth_type=key destroy-apply
 
 install-recur:
     #!/usr/bin/env bash
@@ -16,7 +29,6 @@ install-recur:
         if ! grep -q "~/go/bin" ~/.bashrc; then
             echo 'export PATH=~/go/bin:$PATH' >> ~/.bashrc
         fi
-        export PATH=~/go/bin:$PATH
     fi
 
 setup: install-recur
@@ -109,9 +121,9 @@ curl-test-iam: get-creds-iam
     . .venv/bin/activate
 
     if [ -f .env ]; then
-             set -a
-             source .env
-             set +a
+        set -a
+        source .env
+        set +a
     fi
 
     recur -v --attempts 4 --backoff 3s python apitest_iam.py
