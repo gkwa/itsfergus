@@ -7,12 +7,11 @@ export PATH := "~/go/bin:" + env_var("PATH")
 default:
     @just --list
 
-setup:
-    just setup-iam
+setup: setup-iam
 
-setup-iam: install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam")
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam")
 
-setup-key: install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key")
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key")
 
 destroy-iam: _tf-destroy-iam
 
@@ -22,12 +21,12 @@ _tf-init-ecr:
     terraform init -upgrade
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo -var="auth_type=iam"
 
-install-recur:
-   #!/usr/bin/env bash
-   set -euo pipefail
-   if ! command -v recur >/dev/null 2>&1; then
-       go install github.com/dbohdan/recur/v2@latest
-   fi
+_install-recur:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v recur >/dev/null 2>&1; then
+        go install github.com/dbohdan/recur/v2@latest
+    fi
 
 _docker-build:
     #!/usr/bin/env bash
@@ -77,9 +76,7 @@ _tf-destroy-key:
 teardown:
     just destroy-iam
 
-
-
-curl-test: install-recur
+curl-test: _install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     set -a; source .env; set +a
@@ -95,8 +92,6 @@ logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
 
 fmt:
+    ruff check . --fix
     just --unstable --fmt
     ruff format .
-
-lint:
-    ruff check .
