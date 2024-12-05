@@ -9,9 +9,9 @@ default:
 
 setup: setup-iam
 
-setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam")
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") curl-test
 
-setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key")
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") curl-test
 
 destroy-iam: _tf-destroy-iam
 
@@ -83,9 +83,9 @@ curl-test: _install-recur
     uv sync
     . .venv/bin/activate
     if [ -v API_KEY ]; then
-        recur --timeout 2s --attempts 4 --backoff 3s python apitest_key.py
+        recur --timeout 2s --attempts 5 --backoff 3s python apitest_key.py
     else
-        recur --timeout 2s --attempts 4 --backoff 3s python apitest_iam.py
+        recur --timeout 2s --attempts 5 --backoff 3s python apitest_iam.py
     fi
 
 logs:
