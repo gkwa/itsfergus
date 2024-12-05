@@ -77,8 +77,10 @@ _tf-destroy-iam:
 _tf-destroy-key:
     terraform destroy -auto-approve -var="auth_type=key"
 
-teardown:
-    just destroy-iam
+_remove_dot_env:
+    rm -f .env
+
+teardown: _remove_dot_env destroy-iam destroy-key
 
 curl-test: _install-recur
     #!/usr/bin/env bash
