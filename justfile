@@ -92,6 +92,7 @@ logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
 
 fmt:
+    prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
     ruff check . --fix
     just --unstable --fmt
     ruff format .
