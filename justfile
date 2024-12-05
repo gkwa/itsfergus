@@ -9,9 +9,21 @@ default:
 
 setup: setup-iam
 
-setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") curl-test
+setup-iam: \
+    _install-recur \
+    _tf-init-ecr \
+    _docker-build \
+    _tf-apply-iam \
+    (_init-env "iam") \
+    curl-test
 
-setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") curl-test
+setup-key: \
+    _install-recur \
+    _tf-init-ecr \
+    _docker-build \
+    _tf-apply-key \
+    (_init-env "key") \
+    curl-test
 
 destroy-iam: _tf-destroy-iam
 
