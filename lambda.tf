@@ -95,24 +95,6 @@ resource "aws_iam_role_policy" "lambda_logging" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_kms" {
-  name = "lambda_kms_policy"
-  role = aws_iam_role.lambda_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
 
 resource "aws_iam_role_policy" "lambda_ecr" {
   name = "lambda_ecr_policy"
@@ -128,6 +110,73 @@ resource "aws_iam_role_policy" "lambda_ecr" {
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+
+
+
+
+
+
+
+resource "aws_iam_role_policy" "lambda_kms" {
+  name = "lambda_kms_policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey"
+        ]
+        Resource = [
+          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:ListKeys",
+          "kms:ListAliases"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Add explicit ECR KMS permissions
+resource "aws_iam_role_policy" "lambda_ecr_kms" {
+  name = "lambda_ecr_kms_policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:DescribeImages"
+        ]
+        Resource = "${aws_ecr_repository.app_repo.arn}"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken"
         ]
         Resource = "*"
       }
