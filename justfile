@@ -1,183 +1,95 @@
-set shell := ["bash", "-xuc"]
-set export := true
-
-export PATH := "~/go/bin:" + env_var("PATH")
-aws_region := env_var_or_default("AWS_REGION", "ca-central-1")
-auth_type := env_var_or_default("AUTH_TYPE", "iam")
-
+# List available recipes
 default:
     @just --list
 
-setup-iam:
-    just auth_type=iam setup
+# Setup variables
+AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
+AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
+ECR_REPO := "lambda-docker-repo"
+LAMBDA_NAME := "docker-lambda-function"
 
-setup-key:
-    just auth_type=key setup
-
-destroy-iam:
-    just auth_type=iam destroy-apply
-
-destroy-key:
-    just auth_type=key destroy-apply
-
-install-recur:
+# Initialize environment variables
+_init-env AUTH_TYPE:
     #!/usr/bin/env bash
     set -euo pipefail
-    if ! command -v recur >/dev/null 2>&1; then
-        echo "Installing recur..."
-        go install github.com/dbohdan/recur/v2@latest
-        if ! grep -q "~/go/bin" ~/.bashrc; then
-            echo 'export PATH=~/go/bin:$PATH' >> ~/.bashrc
+    if [ ! -f .env ]; then
+        echo "Creating .env file..."
+
+        # Get account ID
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+        # Get API URL from terraform output
+        API_URL=$(terraform output -raw api_gateway_url)
+
+        # Create env file
+        echo "AWS_REGION={{AWS_REGION}}" > .env
+        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .env
+        echo "ECR_REPO={{ECR_REPO}}" >> .env
+        echo "API_URL=$API_URL" >> .env
+
+        if [ "{{AUTH_TYPE}}" = "key" ]; then
+            API_KEY=$(terraform output -raw api_key)
+            echo "API_KEY=$API_KEY" >> .env
         fi
     fi
 
-setup: install-recur
+# Build and push Docker image
+_docker-build:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Setting up with auth_type={{ auth_type }}"
-    export AUTH_TYPE={{ auth_type }}
-    just deploy
-    just curl-test
+    source .env
 
-teardown: destroy-plan destroy-apply
+    aws ecr get-login-password --region $AWS_REGION | \
+        docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-build:
-    docker build -t lambda-docker:latest .
+    docker build -t $ECR_REPO .
+    docker tag $ECR_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:latest
+    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO:latest
 
-push:
-    #!/usr/bin/env bash
-    set -xeuo pipefail
+# Initialize terraform
+_tf-init:
+    terraform init -upgrade
 
-    REPO_URL=$(terraform output -raw ecr_repository_url)
-    aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin $REPO_URL
-    docker tag lambda-docker:latest $REPO_URL:latest
-    docker push $REPO_URL:latest
+# Apply terraform with IAM auth
+_tf-apply-iam:
+    terraform apply -auto-approve -var="auth_type=iam"
 
-plan:
-    terraform plan -out=tfplan -var="aws_region={{ aws_region }}" -var="auth_type={{ auth_type }}"
+# Apply terraform with Key auth
+_tf-apply-key:
+    terraform apply -auto-approve -var="auth_type=key"
 
-apply:
-    terraform apply -auto-approve -target=aws_ecr_repository.app_repo
-    just build
-    just push
-    just plan
-    terraform apply tfplan
+# Destroy terraform with IAM auth
+_tf-destroy-iam:
+    terraform destroy -auto-approve -var="auth_type=iam"
 
-deploy: init apply
-    @echo "Deployment complete. To test the API Gateway, run 'just curl-test'"
+# Destroy terraform with Key auth
+_tf-destroy-key:
+    terraform destroy -auto-approve -var="auth_type=key"
 
-init:
-    terraform init -no-color
+# Deploy infrastructure with IAM auth
+setup-iam: _tf-init _tf-apply-iam _docker-build (_init-env "iam")
 
-destroy-plan:
-    terraform plan -destroy -out=destroy.tfplan -var="aws_region={{ aws_region }}" -var="auth_type={{ auth_type }}"
+# Deploy infrastructure with API Key auth
+setup-key: _tf-init _tf-apply-key _docker-build (_init-env "key")
 
-destroy-apply: destroy-plan
-    terraform apply destroy.tfplan
+# Destroy infrastructure with IAM auth
+destroy-iam: _tf-destroy-iam
 
-get-creds-key:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
+# Destroy infrastructure with API Key auth
+destroy-key: _tf-destroy-key
 
-    cat << EOF >.env
-    API_KEY=$(terraform output -raw api_key)
-    API_URL=$(terraform output -raw api_gateway_url)
-    EOF
-
-get-creds-iam:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
-
-    export API_INVOCATION_ROLE=$(terraform output -raw api_invocation_role_arn)
-    echo "Getting temporary credentials..."
-
-    export CREDS=$(aws sts assume-role --role-arn $API_INVOCATION_ROLE --role-session-name test-session)
-
-    cat << EOF >.env
-    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)
-    AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)
-    AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)
-    AWS_REGION=$(terraform output -raw aws_region)
-    API_URL=$(terraform output -raw api_gateway_url)
-    EOF
-
-get-creds:
-    #!/usr/bin/env bash
-    if [[ "{{ auth_type }}" == "iam" ]]; then
-        just get-creds-iam
-    else
-        just get-creds-key
-    fi
-
-curl-test-iam: get-creds-iam
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
-
-    uv sync
-    . .venv/bin/activate
-
-    if [ -f .env ]; then
-        set -a
-        source .env
-        set +a
-    fi
-
-    recur -v --attempts 4 --backoff 3s python apitest_iam.py
-
-curl-test-key: get-creds-key
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
-
-    uv sync
-    . .venv/bin/activate
-
-    if [ -f .env ]; then
-        set -a
-        source .env
-        set +a
-    fi
-
-    recur -v --attempts 4 --backoff 3s python apitest_key.py
-
+# Test the API endpoint
 curl-test:
     #!/usr/bin/env bash
-    if [[ "{{ auth_type }}" == "iam" ]]; then
-        just curl-test-iam
+    set -euo pipefail
+    source .env
+
+    if [ -v API_KEY ]; then
+        python apitest_key.py
     else
-        just curl-test-key
+        python apitest_iam.py
     fi
 
+# View CloudWatch logs
 logs:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
-    FUNCTION_NAME=$(terraform output -raw lambda_function_name)
-    aws logs tail /aws/lambda/$FUNCTION_NAME --follow --region {{ aws_region }}
-
-cleanup:
-    rm -f tfplan destroy.tfplan .env
-
-fmt:
-    prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
-    ruff format .
-    ruff check --fix
-    terraform fmt -recursive .
-    just --unstable --fmt
-
-switch-auth:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    if [[ "{{ auth_type }}" == "iam" ]]; then
-        export AUTH_TYPE=key
-    else
-        export AUTH_TYPE=iam
-    fi
-
-    echo "Switched to $AUTH_TYPE authentication"
-    just deploy
+    aws logs tail "/aws/lambda/{{LAMBDA_NAME}}" --since 1h --follow
