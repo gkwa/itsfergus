@@ -50,9 +50,18 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
   credentials_arn    = aws_iam_role.api_gateway_execution_role.arn
 }
 
+# Root path route
 resource "aws_apigatewayv2_route" "lambda_route" {
   api_id             = aws_apigatewayv2_api.lambda_api.id
   route_key          = "ANY /"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+  authorization_type = "AWS_IAM"
+}
+
+# Catch-all route for proxy integrations
+resource "aws_apigatewayv2_route" "lambda_route_catchall" {
+  api_id             = aws_apigatewayv2_api.lambda_api.id
+  route_key          = "ANY /{proxy+}"  # This is the correct syntax for HTTP APIs
   target             = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
   authorization_type = "AWS_IAM"
 }

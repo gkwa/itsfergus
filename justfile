@@ -95,10 +95,14 @@ curl-test: _install-recur
         recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_iam.py
     fi
 
+curl-test2:
+    ./curl-test2
+
 logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
 
 fmt:
+    shfmt -w -s -i 4 *.sh
     prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
     ruff check . --fix
     just --unstable --fmt

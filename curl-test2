@@ -1,0 +1,60 @@
+#!/bin/bash
+set -euo pipefail
+
+# Function to print timestamp and message
+log() {
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $1"
+}
+
+# Load environment variables from .env file
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+else
+    log "Warning: .env file not found"
+fi
+
+# Get AWS credentials and region, with .env values taking precedence
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-$(aws configure get aws_access_key_id)}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-$(aws configure get aws_secret_access_key)}
+AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-$(aws configure get aws_session_token)}
+AWS_REGION=${AWS_REGION:-$(aws configure get region)}
+API_URL=${API_URL:-""}
+API_KEY=${API_KEY:-""}
+
+# Exit if API_URL is not set
+if [ -z "$API_URL" ]; then
+    log "Error: API_URL environment variable is not set"
+    exit 1
+fi
+
+# Function to sign AWS request
+aws_curl() {
+    local url=$1
+    local timestamp=$(date -u '+%Y%m%dT%H%M%SZ')
+    local date=$(date -u '+%Y%m%d')
+
+    # Generate signing headers using AWS CLI
+    local signed_headers=$(aws sigv4-sign \
+        --service execute-api \
+        --region "$AWS_REGION" \
+        --method GET \
+        --uri "$url" \
+        | tr -d '\n' | tr -d '\r')
+
+    # Make the request with signed headers
+    curl -s -H "$signed_headers" "$url"
+}
+
+# Try with IAM auth
+if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+    log "Attempt with IAM auth..."
+    response=$(aws_curl "$API_URL")
+    echo "Response: $response"
+fi
+
+# Try with API Key auth
+if [ -n "$API_KEY" ]; then
+    log "Attempt with API Key auth..."
+    response=$(curl -s -H "x-api-key: $API_KEY" "$API_URL")
+    echo "Response: $response"
+fi
