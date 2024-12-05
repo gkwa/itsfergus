@@ -114,7 +114,7 @@ curl-test-iam: get-creds-iam
              set +a
     fi
 
-    recur --backoff 1s python apitest_iam.py
+    recur -v --attempts 4 --backoff 3s python apitest_iam.py
 
 curl-test-key: get-creds-key
     #!/usr/bin/env bash
@@ -130,7 +130,7 @@ curl-test-key: get-creds-key
         set +a
     fi
 
-    recur --backoff 1s python apitest_key.py
+    recur -v --attempts 4 --backoff 3s python apitest_key.py
 
 curl-test:
     #!/usr/bin/env bash

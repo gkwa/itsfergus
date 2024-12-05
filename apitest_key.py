@@ -1,25 +1,30 @@
 import os
 import sys
+from datetime import datetime
 
 import requests
 
+start_time = datetime.now()
+
 try:
-   api_key = os.environ["API_KEY"]
-   api_url = os.environ["API_URL"]
+    print(f"\n[{start_time}] Attempt with API Key auth...")
 
-   headers = {"x-api-key": api_key}
+    api_key = os.environ["API_KEY"]
+    api_url = os.environ["API_URL"]
 
-   response = requests.get(api_url, headers=headers)
-   print(response.text)
+    headers = {"x-api-key": api_key}
 
-   # Exit 0 for success (2xx), status code otherwise
-   if 200 <= response.status_code < 300:
-       sys.exit(0)
-   sys.exit(response.status_code)
+    response = requests.get(api_url, headers=headers)
+    print(f"Status Code: {response.status_code}")
+    print(f"Response: {response.text}")
+
+    if 200 <= response.status_code < 300:
+        sys.exit(0)
+    sys.exit(response.status_code)
 
 except KeyError as e:
-   print(f"Missing environment variable: {str(e)}")
-   sys.exit(1)
+    print(f"Missing environment variable: {str(e)}")
+    sys.exit(1)
 except requests.exceptions.RequestException as e:
-   print(f"Request failed: {str(e)}")
-   sys.exit(1)
+    print(f"Request failed: {str(e)}")
+    sys.exit(1)
