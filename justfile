@@ -7,7 +7,19 @@ auth_type := env_var_or_default("AUTH_TYPE", "iam")
 default:
     @just --list
 
-setup:
+install-recur:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v recur >/dev/null 2>&1; then
+        echo "Installing recur..."
+        go install github.com/dbohdan/recur/v2@latest
+        if ! grep -q "~/go/bin" ~/.bashrc; then
+            echo 'export PATH=~/go/bin:$PATH' >> ~/.bashrc
+        fi
+        export PATH=~/go/bin:$PATH
+    fi
+
+setup: install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Setting up with auth_type={{ auth_type }}"
@@ -23,16 +35,6 @@ build:
 push:
     #!/usr/bin/env bash
     set -xeuo pipefail
-
-
-    if [ -f .env ]; then
-        set -a
-        source .env
-        set +a
-    fi
-
-
-
 
     REPO_URL=$(terraform output -raw ecr_repository_url)
     aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin $REPO_URL
@@ -103,21 +105,24 @@ curl-test-iam: get-creds-iam
     set -euo pipefail
     set -x
 
+    uv sync
+    . .venv/bin/activate
+
     if [ -f .env ]; then
              set -a
              source .env
              set +a
     fi
 
-    uv sync
-    . .venv/bin/activate
-
-    recur --condition 'code == 0 or (total_time > 300 and exit(1))' python apitest_iam.py
+    recur --backoff 1s python apitest_iam.py
 
 curl-test-key: get-creds-key
     #!/usr/bin/env bash
     set -euo pipefail
     set -x
+
+    uv sync
+    . .venv/bin/activate
 
     if [ -f .env ]; then
         set -a
@@ -125,10 +130,7 @@ curl-test-key: get-creds-key
         set +a
     fi
 
-    uv sync
-    . .venv/bin/activate
-
-    recur --condition 'code == 0 or (total_time > 300 and exit(1))' python apitest_key.py
+    recur --backoff 1s python apitest_key.py
 
 curl-test:
     #!/usr/bin/env bash
