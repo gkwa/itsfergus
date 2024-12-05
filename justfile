@@ -1,37 +1,29 @@
+set export := true
+
 AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
 AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
-export PATH := "~/go/bin:" + env_var("PATH")
+PATH := "~/go/bin:" + env_var("PATH")
 
 default:
     @just --list
 
 setup: setup-iam
 
-setup-iam: \
-    _install-recur \
-    _tf-init-ecr \
-    _docker-build \
-    _tf-apply-iam \
-    (_init-env "iam") \
-    curl-test
-
-setup-key: \
-    _install-recur \
-    _tf-init-ecr \
-    _docker-build \
-    _tf-apply-key \
-    (_init-env "key") \
-    curl-test
-
-destroy-iam: _tf-destroy-iam
-
-destroy-key: _tf-destroy-key
-
-_tf-init-ecr:
+_init-tf:
     terraform init -upgrade
+
+_tf-init-ecr: _init-tf
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo -var="auth_type=iam"
+
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") curl-test
+
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") curl-test
+
+destroy-iam: _init-tf _tf-destroy-iam
+
+destroy-key: _init-tf _tf-destroy-key
 
 _install-recur:
     #!/usr/bin/env bash
@@ -92,12 +84,13 @@ curl-test: _install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     set -a; source .env; set +a
+    set -x
     uv sync
     . .venv/bin/activate
     if [ -v API_KEY ]; then
-        recur --timeout 2s --attempts 5 --backoff 3s python apitest_key.py
+        recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_key.py
     else
-        recur --timeout 2s --attempts 5 --backoff 3s python apitest_iam.py
+        recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_iam.py
     fi
 
 logs:
