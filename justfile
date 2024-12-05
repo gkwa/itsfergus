@@ -36,9 +36,16 @@ _init-env AUTH_TYPE:
     set -euo pipefail
     if [ ! -f .env ]; then
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        if [ "{{ AUTH_TYPE }}" = "iam" ]; then
+            ROLE_ARN=$(terraform output -raw api_invocation_role_arn)
+            CREDS=$(aws sts assume-role --role-arn $ROLE_ARN --role-session-name test-session)
+            echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" > .env
+            echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
+            echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
+        fi
         API_URL=$(terraform output -raw api_gateway_url)
-        echo "AWS_REGION={{ AWS_REGION }}" > .env
         echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .env
+        echo "AWS_REGION={{ AWS_REGION }}" >> .env
         echo "ECR_REPO={{ ECR_REPO }}" >> .env
         echo "API_URL=$API_URL" >> .env
         if [ "{{ AUTH_TYPE }}" = "key" ]; then
@@ -65,9 +72,9 @@ teardown:
 curl-test:
     #!/usr/bin/env bash
     set -euo pipefail
+    set -a; source .env; set +a
     uv sync
     . .venv/bin/activate
-    set -a; source .env; set +a
     if [ -v API_KEY ]; then
         python apitest_key.py
     else
@@ -78,11 +85,8 @@ logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
 
 fmt:
-    ruff format .
     just --unstable --fmt
+    ruff format .
 
 lint:
     ruff check .
-
-uv:
-    uv pip install -r requirements.txt
