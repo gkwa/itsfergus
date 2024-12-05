@@ -2,7 +2,7 @@ AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
 AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
-export PATH := "~/go/bin:$PATH"
+export PATH := "~/go/bin:" + env_var("PATH")
 
 default:
     @just --list
@@ -86,9 +86,9 @@ curl-test: install-recur
     uv sync
     . .venv/bin/activate
     if [ -v API_KEY ]; then
-        recur --attempts 10 --backoff 3s python apitest_key.py
+        recur --timeout 2s --attempts 4 --backoff 3s python apitest_key.py
     else
-        recur --attempts 10 --backoff 3s python apitest_iam.py
+        recur --timeout 2s --attempts 4 --backoff 3s python apitest_iam.py
     fi
 
 logs:
