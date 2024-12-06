@@ -7,7 +7,9 @@ resource "aws_lambda_function" "app" {
   depends_on = [
     aws_ecr_repository.app_repo,
     aws_iam_role_policy_attachment.lambda_logs,
-    aws_iam_role.lambda_role
+    aws_iam_role.lambda_role,
+    aws_iam_role_policy.lambda_kms,
+    aws_iam_role_policy.lambda_ecr_kms
   ]
 
   timeout     = 300
@@ -58,7 +60,7 @@ resource "aws_iam_role" "lambda_role" {
   })
 
   provisioner "local-exec" {
-    command = "sleep 10"
+    command = "sleep 30"
   }
 }
 
@@ -129,10 +131,15 @@ resource "aws_iam_role_policy" "lambda_kms" {
         Action = [
           "kms:Decrypt",
           "kms:DescribeKey",
-          "kms:GenerateDataKey"
+          "kms:GenerateDataKey",
+          "kms:RetireGrant",
+          "kms:CreateGrant",
+          "kms:ListGrants"
         ]
         Resource = [
-          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/*"
+          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/*",
+          "arn:aws:kms:ca-central-1:193048895737:key/24a775bf-745d-468a-9e2e-f3566aaae9d2",
+          "arn:aws:kms:ca-central-1:193048895737:key/*"
         ]
       },
       {

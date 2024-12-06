@@ -103,6 +103,7 @@ logs:
 
 fmt:
     shfmt -w -s -i 4 *.sh
+    terraform fmt -recursive .
     prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
     ruff check . --fix
     just --unstable --fmt
