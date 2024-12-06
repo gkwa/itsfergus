@@ -6,7 +6,8 @@ resource "aws_lambda_function" "app" {
 
   depends_on = [
     aws_ecr_repository.app_repo,
-    aws_iam_role.lambda_role
+    aws_iam_role.lambda_role,
+    aws_iam_role_policy.lambda_consolidated_policy
   ]
 
   timeout     = 300
@@ -109,4 +110,6 @@ resource "aws_iam_role_policy" "lambda_consolidated_policy" {
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  depends_on = [aws_iam_role.lambda_role]
 }
