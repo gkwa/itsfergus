@@ -6,20 +6,9 @@ log() {
     echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $1"
 }
 
-# Load environment variables from .env file
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
-else
-    log "Warning: .env file not found"
-fi
-
-# Get AWS credentials and region, with .env values taking precedence
-AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-$(aws configure get aws_access_key_id)}
-AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-$(aws configure get aws_secret_access_key)}
-AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-$(aws configure get aws_session_token)}
-AWS_REGION=${AWS_REGION:-$(aws configure get region)}
-API_URL=${API_URL:-""}
-API_KEY=${API_KEY:-""}
+set -a
+source .env
+set +a
 
 # Exit if API_URL is not set
 if [ -z "$API_URL" ]; then

@@ -96,7 +96,7 @@ curl-test: _install-recur
     fi
 
 curl-test2:
-    ./curl-test2
+    bash -e ./curl-test2
 
 logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow

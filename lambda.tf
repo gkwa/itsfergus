@@ -117,13 +117,6 @@ resource "aws_iam_role_policy" "lambda_ecr" {
   })
 }
 
-
-
-
-
-
-
-
 resource "aws_iam_role_policy" "lambda_kms" {
   name = "lambda_kms_policy"
   role = aws_iam_role.lambda_role.id
