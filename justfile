@@ -1,89 +1,140 @@
-set shell := ["bash", "-xuc"]
 set export := true
 
-aws_region := env_var_or_default("AWS_REGION", "ca-central-1")
+AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
+AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
+ECR_REPO := "lambda-docker-repo"
+LAMBDA_NAME := "docker-lambda-function"
+PATH := "~/go/bin:" + env_var("PATH")
 
 default:
     @just --list
 
-setup: deploy curl-test
+setup: setup-iam
 
-teardown: destroy-plan destroy-apply
+_init-tf:
+    terraform init -upgrade
 
-build:
-    docker build -t lambda-docker:latest .
+_tf-init-ecr: _init-tf
+    terraform apply -auto-approve -target=aws_ecr_repository.app_repo -var="auth_type=iam"
 
-push:
-    #!/usr/bin/env bash
-    set -xeuo pipefail
-    REPO_URL=$(terraform output -raw ecr_repository_url)
-    aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin $REPO_URL
-    docker tag lambda-docker:latest $REPO_URL:latest
-    docker push $REPO_URL:latest
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") apitestpython-iam
 
-plan:
-    terraform plan -out=tfplan -var="aws_region={{ aws_region }}"
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") apitestpython-key
 
-apply:
-    terraform apply -auto-approve -target=aws_ecr_repository.app_repo
-    just build
-    just push
-    just plan
-    terraform apply tfplan
+destroy-iam: _init-tf _tf-destroy-iam
 
-deploy: init apply
-    @echo "Deployment complete. To test the API Gateway, run 'just curl-test'"
+destroy-key: _init-tf _tf-destroy-key
 
-init:
-    terraform init -no-color
-
-destroy-plan:
-    terraform plan -destroy -out=destroy.tfplan -var="aws_region={{ aws_region }}"
-
-destroy-apply: destroy-plan
-    terraform apply destroy.tfplan
-
-get-creds:
+_install-recur:
     #!/usr/bin/env bash
     set -euo pipefail
-    set -x
+    if ! command -v recur >/dev/null 2>&1; then
+        go install github.com/dbohdan/recur/v2@latest
+    fi
 
-    export API_INVOCATION_ROLE=$(terraform output -raw api_invocation_role_arn)
-    echo "Getting temporary credentials..."
-
-    export CREDS=$(aws sts assume-role --role-arn $API_INVOCATION_ROLE --role-session-name test-session)
-
-    echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >.env
-    echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" >> .env
-    echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
-    echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
-    echo "AWS_REGION=$(terraform output -raw aws_region)" >> .env
-    echo "API_URL=$(terraform output -raw api_gateway_url)" >> .env
-
-curl-test: get-creds
+_docker-build:
     #!/usr/bin/env bash
     set -euo pipefail
-    set -x
+    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    aws ecr get-login-password --region {{ AWS_REGION }} | \
+        docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.{{ AWS_REGION }}.amazonaws.com
+    docker build -t {{ ECR_REPO }} .
+    docker tag {{ ECR_REPO }}:latest $AWS_ACCOUNT_ID.dkr.ecr.{{ AWS_REGION }}.amazonaws.com/{{ ECR_REPO }}:latest
+    docker push $AWS_ACCOUNT_ID.dkr.ecr.{{ AWS_REGION }}.amazonaws.com/{{ ECR_REPO }}:latest
 
-    set -a # make env vars avail to subprocesses
-    source .env
-    set +a
+_init-env AUTH_TYPE:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f .env ]; then
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        if [ "{{ AUTH_TYPE }}" = "iam" ]; then
+            ROLE_ARN=$(terraform output -raw api_invocation_role_arn)
+            CREDS=$(aws sts assume-role --role-arn $ROLE_ARN --role-session-name test-session)
+            echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)" > .env
+            echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
+            echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
+        fi
+        API_URL=$(terraform output -raw api_gateway_url)
+        echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .env
+        echo "AWS_REGION={{ AWS_REGION }}" >> .env
+        echo "ECR_REPO={{ ECR_REPO }}" >> .env
+        echo "API_URL=$API_URL" >> .env
+        API_HOST=$(echo "$API_URL" | sed 's|^https://||' | sed 's|/$||')
+        echo "API_HOST=$API_HOST" >> .env
+
+        if [ "{{ AUTH_TYPE }}" = "key" ]; then
+            API_KEY=$(terraform output -raw api_key)
+            echo "API_KEY=$API_KEY" >> .env
+        fi
+    fi
+
+_tf-apply-iam:
+    terraform apply -auto-approve -var="auth_type=iam"
+
+_tf-apply-key:
+    terraform apply -auto-approve -var="auth_type=key"
+
+_tf-destroy-iam:
+    terraform destroy -auto-approve -var="auth_type=iam"
+
+_tf-destroy-key:
+    terraform destroy -auto-approve -var="auth_type=key"
+
+_remove_dot_env:
+    rm -f .env
+
+teardown: _remove_dot_env destroy-iam destroy-key
+
+apitestpython-key: _install-recur
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -a; source .env; set +a
     uv sync
     . .venv/bin/activate
-    python apitest.py
+    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_key.py
 
-logs:
+apitestpython-iam: _install-recur
     #!/usr/bin/env bash
     set -euo pipefail
-    set -x
-    FUNCTION_NAME=$(terraform output -raw lambda_function_name)
-    aws logs tail /aws/lambda/$FUNCTION_NAME --follow --region {{ aws_region }}
+    set -a; source .env; set +a
+    uv sync
+    . .venv/bin/activate
+    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_iam.py
 
-cleanup:
-    rm -f tfplan destroy.tfplan .env
+apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
+
+apitest-key: apitesthurl-key apitestpython-key apitestbash-key
+
+apitesthurl-key:
+    hurl \
+        --jobs 1 \
+        --repeat 1 \
+        --test \
+        --variables-file=.env \
+        apitest-key.hurl
+
+apitesthurl-iam:
+    hurl \
+        --jobs 1 \
+        --repeat 1 \
+        --test \
+        --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" \
+        --variables-file=.env \
+        apitesthurl-iam.hurl
+
+apitestbash-key:
+    bash -e apitestbash-key.sh
+
+apitestbash-iam:
+    bash -e apitestbash-iam.sh
+
+logs:
+    aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
 
 fmt:
-    ruff format .
-    ruff check --fix
+    shfmt -w -s -i 4 *.sh
     terraform fmt -recursive .
+    prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
+    ruff check . --fix
+    ruff format .
     just --unstable --fmt

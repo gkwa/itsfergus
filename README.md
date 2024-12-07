@@ -32,6 +32,7 @@ just logs # check cloudwatch logs
 
 ```bash
 just teardown
+rm -f .env
 ```
 
 ## Dependencies
@@ -43,3 +44,4 @@ just teardown
 - [ruff](https://github.com/astral-sh/ruff)
 - [terraform](https://github.com/hashicorp/terraform)
 - [uv](https://github.com/astral-sh/uv)
+- [recur](https://github.com/dbohdan/recur?tab=readme-ov-file#recur)
