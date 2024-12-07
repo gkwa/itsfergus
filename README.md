@@ -15,6 +15,8 @@ Its a reminder for how to create and deploy an AWS Lambda function in a Docker c
 
 The Lambda function generates a random matrix using NumPy as a simple example payload.
 
+I started this journey after finding [pixegami](https://www.youtube.com/c/pixegami)'s great youtube [tutorial](https://www.youtube.com/watch?v=wbsbXfkv47A).
+
 ## Quick Start
 
 Try both authentication methods:
