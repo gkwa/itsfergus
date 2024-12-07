@@ -111,7 +111,7 @@ apitesthurl-key:
         --repeat 1 \
         --test \
         --variables-file=.env \
-        apitest-key.hurl
+        apitesthurl-key.hurl
 
 apitesthurl-iam:
     hurl \
