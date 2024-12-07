@@ -52,10 +52,10 @@ signature=$(echo -n "$string_to_sign" | openssl dgst -sha256 -hex -mac HMAC -mac
 
 # Make signed request
 curl --silent \
-    -H "Host: $host" \
-    -H "Authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/$credential_scope, SignedHeaders=host;user-agent;x-amz-date;x-amz-security-token, Signature=$signature" \
-    -H "Accept: */*" \
-    -H "x-amz-date: $date" \
-    -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
-    -H "User-Agent: hurl/6.0.0" \
+    --header "Host: $host" \
+    --header "Authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/$credential_scope, SignedHeaders=host;user-agent;x-amz-date;x-amz-security-token, Signature=$signature" \
+    --header "Accept: */*" \
+    --header "x-amz-date: $date" \
+    --header "x-amz-security-token: $AWS_SESSION_TOKEN" \
+    --header "User-Agent: hurl/6.0.0" \
     "$API_URL"

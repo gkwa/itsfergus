@@ -2,9 +2,11 @@
 
 ## Motivation
 
-I want to curl with an auth protected Lambda function that runs from a docker a container.
+I want to be able to curl an auth protected Lambda function that runs from a docker a container.
 
-This project demonstrates how to create and deploy an AWS Lambda function in a Docker container with API Gateway and two different authentication methods:
+This is results of many iterations with Claude.ai.
+
+Its a reminder for how to create and deploy an AWS Lambda function in a Docker container with API Gateway and two different authentication methods:
 
 - [IAM authentication for API Gateway](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv.html)
 - [Usage plans with API keys](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html)
@@ -54,77 +56,66 @@ Note: Commands prefixed with underscore (e.g., `_init-tf`, `_docker-build`) are 
 After setup, you can make requests using curl. Here's a real example (keys shown are now invalid):
 
 ```bash
+
 curl --header 'x-api-key: ODF2NyIwsz3wEgTVcraZ07ksuX1j7e9FaN6qAre0' \
      'https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod'
 ```
 
-When running Hurl tests with `just apitesthurl-key`, you'll see details about the request:
-
-```
-* Variables:
-*     ECR_REPO: lambda-docker-repo
-*     AWS_ACCOUNT_ID: 193048895737
-*     API_URL: https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod
-*     API_KEY: ODF2NyIwsz3wEgTVcraZ07ksuX1j7e9FaN6qAre0
-*     API_HOST: ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod
-*     AWS_REGION: ca-central-1
-
-* Request:
-* GET https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod
-* x-api-key: ODF2NyIwsz3wEgTVcraZ07ksuX1j7e9FaN6qAre0
-
-* Response Headers:
-< HTTP/2 200
-< content-type: application/json
-< x-amzn-requestid: 1e34bf82-a101-4d8d-9ddc-b62216c91c27
-< x-amz-apigw-id: CbrTOG8l4osERZg=
-```
-
-The setup creates a `.env` file containing your actual credentials and endpoints.
-
-## Infrastructure Setup Reference
-
-### Setup Commands
-
-```bash
-# Show available commands
-just
-
-# Deploy and capture logs
-time just setup 2>&1 | tee log.txt
-python3 redact.py log.txt > log_redacted.txt
-
-# Monitor Lambda execution
-just logs
-```
-
-### Testing Each Auth Method
-
-```bash
-# Test IAM authentication setup
-just apitest-iam
-
-# Test API key authentication setup
-just apitest-key
-```
-
-### Development Tools
-
-```bash
-# Format all code files
-just fmt
-```
-
 ## Generated Configuration
 
-The setup process creates a `.env` file with necessary configuration:
+The setup process creates a `.env` file with different configurations based on the authentication method:
 
-- `AWS_PROFILE`: AWS credentials profile (default: "default")
-- `AWS_REGION`: AWS region (default: "ca-central-1")
-- `ECR_REPO`: ECR repository name
-- `LAMBDA_NAME`: Lambda function name
-- `API_URL`: Generated API Gateway endpoint
-- `API_KEY`: Generated API key (when using key authentication)
+### For API Key Authentication
+
+```
+# .env
+AWS_ACCOUNT_ID=123456789012
+AWS_REGION=ca-central-1
+ECR_REPO=lambda-docker-repo
+API_URL=https://76853b6ipk.execute-api.ca-central-1.amazonaws.com/prod
+API_HOST=76853b6ipk.execute-api.ca-central-1.amazonaws.com/prod
+API_KEY=FPXs1bXY35axVFfbU2zPs7wUNQXfiiUj1lmYBI1W
+```
+
+### For IAM Authentication
+
+```
+# .env
+AWS_ACCESS_KEY_ID=ASIASZ4U4MD4WOQ4V22O
+AWS_SECRET_ACCESS_KEY=n9+Hjywl5SJFm0iDrf6Qr9VqMTWkGG48sCUUA/EE
+AWS_SESSION_TOKEN=IQoJb3JpZ2luX2VjEJL//////////wEaDGNhLWNlbnRyYWwtMSJHMEUCIQCvHk5UCm5NOGC2hU6cAX4nABGwF0I3x+zf0LoJ0AER5QIgOwXECMJeWfBust9eybrx9Qdrznm9kFS0r6OGzBem/tIqmQIITBAAGgwxOTMwNDg4OTU3MzciDLvhQq2W3YXH5r7Z6Cr2AXskdmikMi2UOcyKHblqBkc0pqbod35LBaqoHyU3EbhKyQ4jizT92rveDIDUtP9X1dqvE4S/s950pncWrd4L4T58H6wnN9Uh83pJpbxh5OhovgYZtl3HZjcbvTacv3aAUCBrylxD1BKFw4ogDmPiCurtVxSXqrRBThxYlfMRzEEOquDPXbVk57vo20JSE5WFBBeXkcQHPKdRgn8CdeAHROCjtSp3VhDy5AZxzYrslVeY3dI2RLOI30PTbPMeMISF10LwduMhEn9jCWkWKl2xqaf9IsCBdGun9qwAH6e6ZwP0nwr81bUH4zxxh/yNzJMMIH6sEfqUyDCLp9K6BjqdAUdmIDGbn++5xlS+Z9xI9l9u+TvOXBH052Fx0041C7kVH+x3tjU5jlFTuMGr5RYj9YebxZq1Xbm8GHEh865AhKTd8b3PiEa4HJyGJqnKfDUss7tin6YkAX/sboV3xdI4NTP3e2zL++Q4FZZZrwTqp7sCja4QgMj3CwwtNnPMOWrMUHGS6PYgVImQ6Kxy92B1iiO1M8r2WmWLPA9ples=
+AWS_ACCOUNT_ID=123456789012
+AWS_REGION=ca-central-1
+ECR_REPO=lambda-docker-repo
+API_URL=https://oordw5fnzh.execute-api.ca-central-1.amazonaws.com/
+API_HOST=oordw5fnzh.execute-api.ca-central-1.amazonaws.com
+```
+
+results in this monstrosity:
+
+```bash
+curl --silent \
+  -H 'Host: oordw5fnzh.execute-api.ca-central-1.amazonaws.com' \
+  -H 'Authorization: AWS4-HMAC-SHA256 Credential=ASIASZ4U4MD4WOQ4V22O/20241207/ca-central-1/execute-api/aws4_request, SignedHeaders=host;user-agent;x-amz-date;x-amz-security-token, Signature=a77a3b18087159e3b360de0a156d59e43aeb67ffe4d4e829b6d17c40341d26c2' \
+  -H 'Accept: */*' \
+  -H 'x-amz-date: 20241207T183535Z' \
+  -H 'x-amz-security-token: IQoJb3JpZ2luX2VjEJL//////////wEaDGNhLWNlbnRyYWwtMSJHMEUCIQCvHk5UCm5NOGC2hU6cAX4nABGwF0I3x+zf0LoJ0AER5QIgOwXECMJeWfBust9eybrx9Qdrznm9kFS0r6OGzBem/tIqmQIITBAAGgwxOTMwNDg4OTU3MzciDLvhQq2W3YXH5r7Z6Cr2AXskdmikMi2UOcyKHblqBkc0pqbod35LBaqoHyU3EbhKyQ4jizT92rveDIDUtP9X1dqvE4S/s950pncWrd4L4T58H6wnN9Uh83pJpbxh5OhovgYZtl3HZjcbvTacv3aAUCBrylxD1BKFw4ogDmPiCurtVxSXqrRBThxYlfMRzEEOquDPXbVk57vo20JSE5WFBBeXkcQHPKdRgn8CdeAHROCjtSp3VhDy5AZxzYrslVeY3dI2RLOI30PTbPMeMISF10LwduMhEn9jCWkWKl2xqaf9IsCBdGun9qwAH6e6ZwP0nwr81bUH4zxxh/yNzJMMIH6sEfqUyDCLp9K6BjqdAUdmIDGbn++5xlS+Z9xI9l9u+TvOXBH052Fx0041C7kVH+x3tjU5jlFTuMGr5RYj9YebxZq1Xbm8GHEh865AhKTd8b3PiEa4HJyGJqnKfDUss7tin6YkAX/sboV3xdI4NTP3e2zL++Q4FZZZrwTqp7sCja4QgMj3CwwtNnPMOWrMUHGS6PYgVImQ6Kxy92B1iiO1M8r2WmWLPA9ples=' \
+  -H 'User-Agent: hurl/6.0.0' \
+  https://oordw5fnzh.execute-api.ca-central-1.amazonaws.com/
+```
+
+Response:
+
+```json
+{
+  "message": "Matrix generated successfully",
+  "matrix": [
+    [0.1989188846757185, 0.9292142971834155],
+    [0.7873764687384766, 0.7633609115232858]
+  ],
+  "matrix_string": "[[0.2 , 0.93],\n [0.79, 0.76]]"
+}
+```
 
 ## Example API Response
 
