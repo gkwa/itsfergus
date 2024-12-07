@@ -91,7 +91,7 @@ apitestpython-key: _install-recur
     set -a; source .env; set +a
     uv sync
     . .venv/bin/activate
-    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_key.py
+    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-key.py
 
 apitestpython-iam: _install-recur
     #!/usr/bin/env bash
@@ -99,7 +99,7 @@ apitestpython-iam: _install-recur
     set -a; source .env; set +a
     uv sync
     . .venv/bin/activate
-    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_iam.py
+    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
 apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 
@@ -111,7 +111,7 @@ apitesthurl-key:
         --repeat 1 \
         --test \
         --variables-file=.env \
-        apitesthurl-key.hurl
+        apitest-key.hurl
 
 apitesthurl-iam:
     hurl \
@@ -120,13 +120,13 @@ apitesthurl-iam:
         --test \
         --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" \
         --variables-file=.env \
-        apitesthurl-iam.hurl
+        apitest-iam.hurl
 
 apitestbash-key:
-    bash -e apitestbash-key.sh
+    bash -e apitest-key.sh
 
 apitestbash-iam:
-    bash -e apitestbash-iam.sh
+    bash -e apitest-iam.sh
 
 logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
