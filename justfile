@@ -89,7 +89,7 @@ apitestpython-key: _install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     set -a; source .env; set +a
-    uv sync
+    uv sync --queit
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-key.py
 
@@ -97,7 +97,7 @@ apitestpython-iam: _install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     set -a; source .env; set +a
-    uv sync
+    uv sync --queit
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
@@ -105,8 +105,9 @@ apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 
 apitest-key: apitesthurl-key apitestpython-key apitestbash-key
 
-apitesthurl-key:
+apitesthurl-key: _install-recur
     hurl \
+        --retry 10 \
         --jobs 1 \
         --repeat 1 \
         --test \
@@ -115,6 +116,7 @@ apitesthurl-key:
 
 apitesthurl-iam:
     hurl \
+        --retry 10 \
         --jobs 1 \
         --repeat 1 \
         --test \
