@@ -17,9 +17,9 @@ _init-tf:
 _tf-init-ecr: _init-tf
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo -var="auth_type=iam"
 
-setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") curl-test
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") apitestpython-iam
 
-setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") curl-test
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") apitestpython-key
 
 destroy-iam: _init-tf _tf-destroy-iam
 
@@ -59,6 +59,9 @@ _init-env AUTH_TYPE:
         echo "AWS_REGION={{ AWS_REGION }}" >> .env
         echo "ECR_REPO={{ ECR_REPO }}" >> .env
         echo "API_URL=$API_URL" >> .env
+        API_HOST=$(echo "$API_URL" | sed 's|^https://||' | sed 's|/$||')
+        echo "API_HOST=$API_HOST" >> .env
+
         if [ "{{ AUTH_TYPE }}" = "key" ]; then
             API_KEY=$(terraform output -raw api_key)
             echo "API_KEY=$API_KEY" >> .env
@@ -82,21 +85,48 @@ _remove_dot_env:
 
 teardown: _remove_dot_env destroy-iam destroy-key
 
-curl-test: _install-recur
+apitestpython-key: _install-recur
     #!/usr/bin/env bash
     set -euo pipefail
     set -a; source .env; set +a
-    set -x
     uv sync
     . .venv/bin/activate
-    if [ -v API_KEY ]; then
-        recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_key.py
-    else
-        recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_iam.py
-    fi
+    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_key.py
 
-curl-test2:
-    bash -e ./curl-test2
+apitestpython-iam: _install-recur
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -a; source .env; set +a
+    uv sync
+    . .venv/bin/activate
+    recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest_iam.py
+
+apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
+
+apitest-key: apitesthurl-key apitestpython-key apitestbash-key
+
+apitesthurl-key:
+    hurl \
+        --jobs 1 \
+        --repeat 1 \
+        --test \
+        --variables-file=.env \
+        apitest-key.hurl
+
+apitesthurl-iam:
+    hurl \
+        --jobs 1 \
+        --repeat 1 \
+        --test \
+        --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" \
+        --variables-file=.env \
+        apitesthurl-iam.hurl
+
+apitestbash-key:
+    bash -e apitestbash-key.sh
+
+apitestbash-iam:
+    bash -e apitestbash-iam.sh
 
 logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
@@ -106,5 +136,5 @@ fmt:
     terraform fmt -recursive .
     prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
     ruff check . --fix
-    just --unstable --fmt
     ruff format .
+    just --unstable --fmt

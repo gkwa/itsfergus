@@ -1,11 +1,11 @@
+import datetime
 import os
 import sys
-from datetime import datetime
 
 import requests
 import requests_aws4auth
 
-start_time = datetime.now()
+start_time = datetime.datetime.now()
 
 try:
     print(f"\n[{start_time}] Attempt with IAM auth...")
