@@ -27,7 +27,6 @@ destroy-key: _init-tf _tf-destroy-key
 
 _install-recur:
     #!/usr/bin/env bash
-    set -euo pipefail
     if ! command -v recur >/dev/null 2>&1; then
         go install github.com/dbohdan/recur/v2@latest
     fi
@@ -87,17 +86,15 @@ teardown: _remove_dot_env destroy-iam destroy-key
 
 apitestpython-key: _install-recur
     #!/usr/bin/env bash
-    set -euo pipefail
     set -a; source .env; set +a
-    uv sync --queit
+    uv sync --quiet
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-key.py
 
 apitestpython-iam: _install-recur
     #!/usr/bin/env bash
-    set -euo pipefail
     set -a; source .env; set +a
-    uv sync --queit
+    uv sync --quiet
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
@@ -106,6 +103,7 @@ apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 apitest-key: apitesthurl-key apitestpython-key apitestbash-key
 
 apitesthurl-key: _install-recur
+    #!/usr/bin/env bash
     hurl \
         --retry 10 \
         --jobs 1 \
@@ -115,6 +113,7 @@ apitesthurl-key: _install-recur
         apitest-key.hurl
 
 apitesthurl-iam:
+    #!/usr/bin/env bash
     hurl \
         --retry 10 \
         --jobs 1 \
