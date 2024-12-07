@@ -4,7 +4,9 @@
 
 I want to be able to curl an auth protected Lambda function that runs from a docker a container.
 
-This is results of many iterations with Claude.ai.
+This is the result of many iterations with Claude.ai since I have very little experience with API Gateway.
+
+Its tricky and time consuing to learn this stuff. This terraform gives me starting point to tinker further.
 
 Its a reminder for how to create and deploy an AWS Lambda function in a Docker container with API Gateway and two different authentication methods:
 
