@@ -95,12 +95,12 @@ results in this monstrosity:
 
 ```bash
 curl --silent \
-  -H 'Host: oordw5fnzh.execute-api.ca-central-1.amazonaws.com' \
-  -H 'Authorization: AWS4-HMAC-SHA256 Credential=ASIASZ4U4MD4WOQ4V22O/20241207/ca-central-1/execute-api/aws4_request, SignedHeaders=host;user-agent;x-amz-date;x-amz-security-token, Signature=a77a3b18087159e3b360de0a156d59e43aeb67ffe4d4e829b6d17c40341d26c2' \
-  -H 'Accept: */*' \
-  -H 'x-amz-date: 20241207T183535Z' \
-  -H 'x-amz-security-token: IQoJb3JpZ2luX2VjEJL//////////wEaDGNhLWNlbnRyYWwtMSJHMEUCIQCvHk5UCm5NOGC2hU6cAX4nABGwF0I3x+zf0LoJ0AER5QIgOwXECMJeWfBust9eybrx9Qdrznm9kFS0r6OGzBem/tIqmQIITBAAGgwxOTMwNDg4OTU3MzciDLvhQq2W3YXH5r7Z6Cr2AXskdmikMi2UOcyKHblqBkc0pqbod35LBaqoHyU3EbhKyQ4jizT92rveDIDUtP9X1dqvE4S/s950pncWrd4L4T58H6wnN9Uh83pJpbxh5OhovgYZtl3HZjcbvTacv3aAUCBrylxD1BKFw4ogDmPiCurtVxSXqrRBThxYlfMRzEEOquDPXbVk57vo20JSE5WFBBeXkcQHPKdRgn8CdeAHROCjtSp3VhDy5AZxzYrslVeY3dI2RLOI30PTbPMeMISF10LwduMhEn9jCWkWKl2xqaf9IsCBdGun9qwAH6e6ZwP0nwr81bUH4zxxh/yNzJMMIH6sEfqUyDCLp9K6BjqdAUdmIDGbn++5xlS+Z9xI9l9u+TvOXBH052Fx0041C7kVH+x3tjU5jlFTuMGr5RYj9YebxZq1Xbm8GHEh865AhKTd8b3PiEa4HJyGJqnKfDUss7tin6YkAX/sboV3xdI4NTP3e2zL++Q4FZZZrwTqp7sCja4QgMj3CwwtNnPMOWrMUHGS6PYgVImQ6Kxy92B1iiO1M8r2WmWLPA9ples=' \
-  -H 'User-Agent: hurl/6.0.0' \
+  --header 'Host: oordw5fnzh.execute-api.ca-central-1.amazonaws.com' \
+  --header 'Authorization: AWS4-HMAC-SHA256 Credential=ASIASZ4U4MD4WOQ4V22O/20241207/ca-central-1/execute-api/aws4_request, SignedHeaders=host;user-agent;x-amz-date;x-amz-security-token, Signature=a77a3b18087159e3b360de0a156d59e43aeb67ffe4d4e829b6d17c40341d26c2' \
+  --header 'Accept: */*' \
+  --header 'x-amz-date: 20241207T183535Z' \
+  --header 'x-amz-security-token: IQoJb3JpZ2luX2VjEJL//////////wEaDGNhLWNlbnRyYWwtMSJHMEUCIQCvHk5UCm5NOGC2hU6cAX4nABGwF0I3x+zf0LoJ0AER5QIgOwXECMJeWfBust9eybrx9Qdrznm9kFS0r6OGzBem/tIqmQIITBAAGgwxOTMwNDg4OTU3MzciDLvhQq2W3YXH5r7Z6Cr2AXskdmikMi2UOcyKHblqBkc0pqbod35LBaqoHyU3EbhKyQ4jizT92rveDIDUtP9X1dqvE4S/s950pncWrd4L4T58H6wnN9Uh83pJpbxh5OhovgYZtl3HZjcbvTacv3aAUCBrylxD1BKFw4ogDmPiCurtVxSXqrRBThxYlfMRzEEOquDPXbVk57vo20JSE5WFBBeXkcQHPKdRgn8CdeAHROCjtSp3VhDy5AZxzYrslVeY3dI2RLOI30PTbPMeMISF10LwduMhEn9jCWkWKl2xqaf9IsCBdGun9qwAH6e6ZwP0nwr81bUH4zxxh/yNzJMMIH6sEfqUyDCLp9K6BjqdAUdmIDGbn++5xlS+Z9xI9l9u+TvOXBH052Fx0041C7kVH+x3tjU5jlFTuMGr5RYj9YebxZq1Xbm8GHEh865AhKTd8b3PiEa4HJyGJqnKfDUss7tin6YkAX/sboV3xdI4NTP3e2zL++Q4FZZZrwTqp7sCja4QgMj3CwwtNnPMOWrMUHGS6PYgVImQ6Kxy92B1iiO1M8r2WmWLPA9ples=' \
+  --header 'User-Agent: hurl/6.0.0' \
   https://oordw5fnzh.execute-api.ca-central-1.amazonaws.com/
 ```
 
