@@ -12,6 +12,10 @@ curl \
   https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod
 ```
 
+What do i need to do to to set this up?
+
+This project aims to answer that.
+
 ## Rant
 
 This project is the result of many iterations with Claude.ai.
