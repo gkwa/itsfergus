@@ -46,8 +46,8 @@ resource "aws_iam_role_policy" "lambda_consolidated_policy" {
           "kms:ReEncrypt*"
         ]
         Resource = [
-          "arn:aws:kms:ca-central-1:${data.aws_caller_identity.current.account_id}:alias/aws/ecr",
-          "arn:aws:kms:ca-central-1:${data.aws_caller_identity.current.account_id}:key/*"
+          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alias/aws/ecr",
+          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/*"
         ]
       },
       {
@@ -57,7 +57,7 @@ resource "aws_iam_role_policy" "lambda_consolidated_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:ca-central-1:${data.aws_caller_identity.current.account_id}:*"
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"
       }
     ]
   })
