@@ -83,9 +83,6 @@ API_KEY=FPXs1bXY35axVFfbU2zPs7wUNQXfiiUj1lmYBI1W
 
 ### For IAM Authentication
 
-
-
-
 ```
 # .env
 AWS_ACCESS_KEY_ID=ASIASZ4U4MD4WOQ4V22O
