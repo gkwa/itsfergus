@@ -51,12 +51,12 @@ _init-env AUTH_TYPE:
         fi
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         API_URL=$(terraform output -raw api_gateway_url)
+        API_HOST=$(echo "$API_URL" | sed 's|^https://||' | sed 's|/$||')
+        echo "API_HOST=$API_HOST" >> .env
         echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .env
         echo "AWS_REGION={{ AWS_REGION }}" >> .env
         echo "ECR_REPO={{ ECR_REPO }}" >> .env
         echo "API_URL=$API_URL" >> .env
-        API_HOST=$(echo "$API_URL" | sed 's|^https://||' | sed 's|/$||')
-        echo "API_HOST=$API_HOST" >> .env
 
         if [ "{{ AUTH_TYPE }}" = "key" ]; then
             API_KEY=$(terraform output -raw api_key)
