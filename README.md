@@ -1,12 +1,21 @@
 # Lambda Docker API Gateway Auth Example
 
-## Motivation
-
 I want to be able to curl an auth protected Lambda function that runs from a docker a container.
 
 This is the result of many iterations with Claude.ai since I have very little experience with API Gateway.
 
 Its tricky and time consuing to learn this stuff. This terraform gives me starting point to tinker further.
+
+## Motivation / rant
+
+Just give me an example already and let me fiddle with it to understand it!
+
+I see a lot of tutorials for tech that don't provide working code. I don't want to read
+a wall of text and think about theory, I want hands on from the start please.
+
+Then, later after running your code and seeing that that it works, I can trust that spending time with your code is woth it.
+
+## Motivation
 
 Its a reminder for how to create and deploy an AWS Lambda function in a Docker container with API Gateway and two different authentication methods:
 
