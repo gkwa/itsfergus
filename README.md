@@ -56,14 +56,14 @@ IAM authentication:
 
 ```bash
 cd itsfergus
-time { just teardown; just setup-iam; }; just apitest-iam
+time just teardown setup-iam apitest-iam
 ```
 
 API Key authentication:
 
 ```bash
 cd itsfergus
-time { just teardown; just setup-key; }; just apitest-key
+time just teardown setup-key apitest-key
 ```
 
 ## Using Just Commands
