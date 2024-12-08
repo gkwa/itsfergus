@@ -12,10 +12,15 @@ Its tricky and time consuing to learn this stuff. This terraform gives me starti
 
 Just give me an example already and let me fiddle with it to understand it!
 
-I see a lot of tutorials for tech that don't provide working code. I don't want to read
-a wall of text and think about theory, I want hands on from the start please.
+I see a lot of tutorials that don't provide working code.
+
+I don't want to read a wall of text and think about theory, I want hands on from the start please.
 
 Then, later after running your code and seeing that that it works, I can trust that spending time with your code is woth it.
+
+Medium articles are helpful in that they give you a hint that something is possible, but you're on your own to iterate to a working solution.
+
+Fine, yes, we should pay the price (time) to learn something, but not by googling for examples forever.
 
 ## Description
 
