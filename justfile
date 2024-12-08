@@ -12,7 +12,7 @@ _init-tf:
     terraform init -upgrade
 
 _tf-init-ecr: _init-tf
-    terraform apply -auto-approve -target=aws_ecr_repository.app_repo -var="auth_type=iam"
+    terraform apply -auto-approve -target=aws_ecr_repository.app_repo
 
 setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") apitestpython-iam
 
