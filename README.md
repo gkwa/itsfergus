@@ -4,6 +4,12 @@
 
 I want to be able to curl an auth protected Lambda function that runs from a docker a container.
 
+...something like this:
+
+```bash
+curl --header 'x-api-key: ODF2NyIwsz3wEgTVcraZ07ksuX1j7e9FaN6qAre0' 'https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod'
+```
+
 ## Rant
 
 This project is the result of many iterations with Claude.ai.
