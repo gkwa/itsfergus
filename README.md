@@ -146,12 +146,12 @@ just teardown
 
 ## Dependencies
 
-- [aws-cli](https://github.com/aws/aws-cli)
-- [curl](https://github.com/curl/curl)
-- [docker](https://github.com/docker/docker-ce)
-- [Go](https://github.com/golang/go)
-- [Hurl](https://github.com/Orange-OpenSource/hurl)
-- [just](https://github.com/casey/just)
-- [ruff](https://github.com/astral-sh/ruff)
-- [terraform](https://github.com/hashicorp/terraform)
-- [uv](https://github.com/astral-sh/uv)
+- [aws-cli](https://github.com/aws/aws-cli?tab=readme-ov-file#aws-cli)
+- [curl](https://github.com/curl/curl?tab=readme-ov-file)
+- [docker](https://www.docker.com/)
+- [Go](https://github.com/golang/go?tab=readme-ov-file#the-go-programming-language)
+- [Hurl](https://github.com/Orange-OpenSource/hurl?tab=readme-ov-file#whats-hurl)
+- [just](https://github.com/casey/just?tab=readme-ov-file#just)
+- [ruff](https://github.com/astral-sh/ruff?tab=readme-ov-file#ruff)
+- [terraform](https://github.com/hashicorp/terraform?tab=readme-ov-file#terraform)
+- [uv](https://github.com/astral-sh/uv?tab=readme-ov-file#uv)
