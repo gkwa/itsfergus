@@ -8,8 +8,6 @@ LAMBDA_NAME := "docker-lambda-function"
 default:
     @just --list
 
-setup: setup-iam
-
 _init-tf:
     terraform init -upgrade
 
