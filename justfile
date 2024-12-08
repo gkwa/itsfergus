@@ -104,24 +104,11 @@ apitest-key: apitesthurl-key apitestpython-key apitestbash-key
 
 apitesthurl-key: _install-recur
     #!/usr/bin/env bash
-    hurl \
-        --retry 10 \
-        --jobs 1 \
-        --repeat 1 \
-        --test \
-        --variables-file=.env \
-        apitest-key.hurl
+    hurl --retry 10 --jobs 1 --repeat 1 --test --variables-file=.env apitest-key.hurl
 
 apitesthurl-iam:
     #!/usr/bin/env bash
-    hurl \
-        --retry 10 \
-        --jobs 1 \
-        --repeat 1 \
-        --test \
-        --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" \
-        --variables-file=.env \
-        apitest-iam.hurl
+    hurl --retry 10 --jobs 1 --repeat 1 --test --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" --variables-file=.env apitest-iam.hurl
 
 apitestbash-key:
     bash -e apitest-key.sh
