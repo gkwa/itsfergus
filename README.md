@@ -83,6 +83,9 @@ API_KEY=FPXs1bXY35axVFfbU2zPs7wUNQXfiiUj1lmYBI1W
 
 ### For IAM Authentication
 
+
+
+
 ```
 # .env
 AWS_ACCESS_KEY_ID=ASIASZ4U4MD4WOQ4V22O
@@ -95,7 +98,7 @@ API_URL=https://oordw5fnzh.execute-api.ca-central-1.amazonaws.com/
 API_HOST=oordw5fnzh.execute-api.ca-central-1.amazonaws.com
 ```
 
-results in this monstrosity:
+That .env along with [`apitest-iam.sh`](./apitest-iam.sh) results in this monstrosity:
 
 ```bash
 curl --silent \
@@ -108,7 +111,7 @@ curl --silent \
   https://oordw5fnzh.execute-api.ca-central-1.amazonaws.com/
 ```
 
-Response:
+but gives the expected response:
 
 ```json
 {

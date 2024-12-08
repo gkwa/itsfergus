@@ -8,7 +8,7 @@ set +a
 # Request details
 date=$(date -u +%Y%m%dT%H%M%SZ)
 datestamp=${date%T*}
-host=$(echo "$API_URL" | sed 's|^https://||' | cut -d'/' -f1)
+host=$API_HOST
 empty_hash=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # Generate signing key using hex encoding for consistent handling
