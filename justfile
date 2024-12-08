@@ -41,6 +41,8 @@ _docker-build:
 _init-env AUTH_TYPE:
     #!/usr/bin/env bash
     set -euo pipefail
+    set -x
+
     if [ ! -f .env ]; then
         if [ "{{ AUTH_TYPE }}" = "key" ]; then
             API_KEY=$(terraform output -raw api_key)
@@ -111,6 +113,7 @@ apitesthurl-iam:
 apitestbash-key:
     #!/usr/bin/env bash
     set -euo pipefail
+    set -x
 
     # Source environment variables
     set -a
