@@ -19,7 +19,7 @@ This project aims to answer that.
 
 This project is the result of many iterations with Claude.ai.
 
-Its tricky and time consuing to learn this stuff. This terraform gives me starting point to tinker further.
+It's time consuing to learn this stuff. This terraform gives me starting point to tinker and observe changes in order to learn what the docs really are saying.
 
 Just give me an example already and let me fiddle with it to understand it!
 
