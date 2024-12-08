@@ -80,6 +80,11 @@ resource "time_sleep" "wait_for_role" {
   create_duration = "10s"
 }
 
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  name              = "/aws/lambda/${var.lambda_function_name}"
+  retention_in_days = 14
+}
+
 resource "aws_lambda_function" "app" {
   function_name = var.lambda_function_name
   role          = aws_iam_role.lambda_role.arn
@@ -88,7 +93,8 @@ resource "aws_lambda_function" "app" {
 
   depends_on = [
     aws_ecr_repository.app_repo,
-    time_sleep.wait_for_role # Wait for role propagation
+    time_sleep.wait_for_role,
+    aws_cloudwatch_log_group.lambda_log_group
   ]
 
   timeout     = 300
