@@ -4,7 +4,6 @@ AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
 AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
-PATH := "~/go/bin:" + env_var("PATH")
 
 default:
     @just --list
@@ -28,7 +27,7 @@ destroy-key: _init-tf _tf-destroy-key
 _install-recur:
     #!/usr/bin/env bash
     if ! command -v recur >/dev/null 2>&1; then
-        go install github.com/dbohdan/recur/v2@latest
+        GOBIN=/usr/local/bin go install github.com/dbohdan/recur/v2@latest
     fi
 
 _docker-build:
