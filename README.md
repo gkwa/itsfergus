@@ -144,12 +144,14 @@ Remove all AWS resources and local files:
 just teardown
 ```
 
-## System Requirements
+## Dependencies
 
-- AWS CLI
-- Docker
-- Just command runner
-- Terraform
-- Python tooling (ruff, uv)
-- Hurl HTTP client
-- Go (for recur installation)
+- [Go](https://github.com/golang/go)
+- [Hurl](https://github.com/Orange-OpenSource/hurl)
+- [aws-cli](https://github.com/aws/aws-cli)
+- [curl](https://github.com/curl/curl)
+- [docker](https://github.com/docker/docker-ce)
+- [just](https://github.com/casey/just)
+- [ruff](https://github.com/astral-sh/ruff)
+- [terraform](https://github.com/hashicorp/terraform)
+- [uv](https://github.com/astral-sh/uv)
