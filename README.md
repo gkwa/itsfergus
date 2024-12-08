@@ -146,11 +146,11 @@ just teardown
 
 ## Dependencies
 
-- [Go](https://github.com/golang/go)
-- [Hurl](https://github.com/Orange-OpenSource/hurl)
 - [aws-cli](https://github.com/aws/aws-cli)
 - [curl](https://github.com/curl/curl)
 - [docker](https://github.com/docker/docker-ce)
+- [Go](https://github.com/golang/go)
+- [Hurl](https://github.com/Orange-OpenSource/hurl)
 - [just](https://github.com/casey/just)
 - [ruff](https://github.com/astral-sh/ruff)
 - [terraform](https://github.com/hashicorp/terraform)
