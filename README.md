@@ -93,7 +93,7 @@ After setup, you can make requests using curl. Here's a real example (keys shown
 ```bash
 
 curl --header 'x-api-key: ODF2NyIwsz3wEgTVcraZ07ksuX1j7e9FaN6qAre0' \
-     'https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod'
+     https://ugc3ld0fa3.execute-api.ca-central-1.amazonaws.com/prod
 ```
 
 ## Generated Configuration
@@ -139,7 +139,9 @@ curl --silent \
   https://oordw5fnzh.execute-api.ca-central-1.amazonaws.com/
 ```
 
-but gives the expected response:
+WAT?
+
+...but it gives the expected response:
 
 ```json
 {
