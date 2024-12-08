@@ -12,6 +12,8 @@ Its tricky and time consuing to learn this stuff. This terraform gives me starti
 
 Just give me an example already and let me fiddle with it to understand it!
 
+I know nothing about AWS API Gateway, but I want to. I don't want to start learning by googling snippets and trying to piece together stuff I know nothing about. Its not productive.
+
 I see a lot of tutorials that don't provide working code.
 
 I don't want to read a wall of text and think about theory, I want hands on from the start please.
