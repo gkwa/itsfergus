@@ -24,6 +24,8 @@ Medium articles are helpful in that they give you a hint that something is possi
 
 Fine, yes, we should pay the price (time) to learn something, but not by googling for examples forever.
 
+This terraform puts the gateway, lambda function, docker container in place so I can tweak it and observe the change and compare that to the AWS docs.
+
 ## Description
 
 Its a reminder for how to create and deploy an AWS Lambda function in a Docker container with API Gateway and two different authentication methods:
