@@ -42,7 +42,6 @@ _init-env AUTH_TYPE:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ ! -f .env ]; then
-        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         if [ "{{ AUTH_TYPE }}" = "iam" ]; then
             ROLE_ARN=$(terraform output -raw api_invocation_role_arn)
             CREDS=$(aws sts assume-role --role-arn $ROLE_ARN --role-session-name test-session)
@@ -50,6 +49,7 @@ _init-env AUTH_TYPE:
             echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)" >> .env
             echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)" >> .env
         fi
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         API_URL=$(terraform output -raw api_gateway_url)
         echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> .env
         echo "AWS_REGION={{ AWS_REGION }}" >> .env
