@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 timearg=${1:-1h}
 unit=${timearg: -1}

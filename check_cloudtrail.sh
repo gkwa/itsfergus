@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 minutes=${1%m}
 start_time=$(date -u -d "${minutes} minutes ago" '+%Y-%m-%dT%H:%M:%SZ')

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Usage: ./search-kms.sh 10m/20h (default: 12h)
 duration=${1:-12h}

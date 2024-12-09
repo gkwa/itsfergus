@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 REGION=ca-central-1
 FUNCTION_NAME=docker-lambda-function
