@@ -1,7 +1,7 @@
 set export := true
 
 AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
-AWS_REGION := env_var_or_default("AWS_REGION", "{{ AWS_REGION }}")
+AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
 
@@ -122,7 +122,11 @@ iam-test-multiple2:
     done
 
 debug:
-    outfile=$(mktemp output-XXXX.json); aws lambda invoke --function-name docker-lambda-function --region {{ AWS_REGION }}  --payload '{}' $outfile; rm -f $outfile
+    #!/usr/bin/env bash
+    REGION={{ AWS_REGION }}
+
+    set -e
+    outfile=$(mktemp output-XXXX.json); aws lambda invoke --function-name docker-lambda-function --region $REGION --payload '{}' $outfile; rm -f $outfile
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix:
