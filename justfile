@@ -14,9 +14,9 @@ _init-tf:
 _tf-init-ecr: _init-tf
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo
 
-setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") apitestpython-iam
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") apitest-iam
 
-setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") apitestpython-key
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") apitest-key
 
 destroy-iam: _init-tf _tf-destroy-iam
 
@@ -95,17 +95,45 @@ apitestpython-iam: _install-recur
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
+iam-test-multiple:
+    #!/usr/bin/env bash
+    set -e
+    >iam-test.multiple.log
+    for i in {1..10}; do
+        if ! (just teardown setup-iam); then
+            just debug
+            exit 1
+        fi
+        echo $i >iam-test.multiple.log
+    done
+
+iam-test-multiple2:
+    #!/usr/bin/env bash
+    set -e
+    >iam-test.multiple2.log
+    for i in {1..10}; do
+        rm -f .env
+        if ! (just setup-iam); then
+            just debug
+            exit 1
+        fi
+        echo $i >iam-test.multiple2.log
+    done
+
+debug:
+    outfile=$(mktemp output-XXXX.json); aws lambda invoke --function-name docker-lambda-function --region ca-central-1 --payload '{}' $outfile; rm -f $outfile
+
 apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 
 apitest-key: apitesthurl-key apitestpython-key apitestbash-key
 
 apitesthurl-key: _install-recur
     #!/usr/bin/env bash
-    hurl --retry 10 --jobs 1 --repeat 1 --test --variables-file=.env apitest-key.hurl
+    hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 --test --variables-file=.env apitest-key.hurl
 
 apitesthurl-iam:
     #!/usr/bin/env bash
-    hurl --retry 10 --jobs 1 --repeat 1 --test --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" --variables-file=.env apitest-iam.hurl
+    hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 --test --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" --variables-file=.env apitest-iam.hurl
 
 apitestbash-key:
     bash -e apitest-key.sh
