@@ -22,6 +22,10 @@ destroy-iam: _init-tf _tf-destroy-iam
 
 destroy-key: _init-tf _tf-destroy-key
 
+cleanup-kms-grants:
+    ./cleanup_kms_grants.sh
+    ./check-kms-grants.sh
+
 _install-recur:
     #!/usr/bin/env bash
     if ! command -v recur >/dev/null 2>&1; then
@@ -171,12 +175,12 @@ fmt:
     just --unstable --fmt
 
 _cleanup_kms_grants:
-    bash cleanup_kms_grants.sh
+    ./cleanup_kms_grants.sh
 
 check-all-kms-grants:
-    bash check-all-kms-grants.sh
+    ./check-all-kms-grants.sh
 
 check-kms-grants:
-    bash check-kms-grants.sh
+    ./check-kms-grants.sh
 
 teardown: _remove_dot_env _cleanup_kms_grants destroy-iam destroy-key
