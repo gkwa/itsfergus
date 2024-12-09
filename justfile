@@ -128,18 +128,18 @@ debug:
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix:
-    bash kms-fix.sh
+    ./kms-fix.sh
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix2:
-    bash -e kms-fix2.sh
+    ./kms-fix2.sh
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix3:
-    bash -e kms-fix3.sh
+    ./kms-fix3.sh
 
 check-quotas:
-    bash -e check-quotas.sh
+    ./check-quotas.sh
 
 apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 
@@ -154,10 +154,10 @@ apitesthurl-iam:
     hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 --test --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" --variables-file=.env apitest-iam.hurl
 
 apitestbash-key:
-    bash -e apitest-key.sh
+    ./apitest-key.sh
 
 apitestbash-iam:
-    bash -e apitest-iam.sh
+    ./apitest-iam.sh
 
 logs:
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
