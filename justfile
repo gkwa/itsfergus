@@ -14,9 +14,9 @@ _init-tf:
 _tf-init-ecr: _init-tf
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo
 
-setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (_init-env "iam") apitest-iam
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (init-env "iam") apitest-iam
 
-setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (_init-env "key") apitest-key
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (init-env "key") apitest-key
 
 destroy-iam: _init-tf _tf-destroy-iam
 
@@ -38,9 +38,10 @@ _docker-build:
     docker tag {{ ECR_REPO }}:latest $AWS_ACCOUNT_ID.dkr.ecr.{{ AWS_REGION }}.amazonaws.com/{{ ECR_REPO }}:latest
     docker push $AWS_ACCOUNT_ID.dkr.ecr.{{ AWS_REGION }}.amazonaws.com/{{ ECR_REPO }}:latest
 
-_init-env AUTH_TYPE:
+init-env AUTH_TYPE:
     #!/usr/bin/env bash
     set -euo pipefail
+    set -x
     if [ ! -f .env ]; then
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         if [ "{{ AUTH_TYPE }}" = "iam" ]; then
