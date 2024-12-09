@@ -1,7 +1,7 @@
 set export := true
 
 AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
-AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
+AWS_REGION := env_var_or_default("AWS_REGION", "{{ AWS_REGION }}")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
 
@@ -122,7 +122,191 @@ iam-test-multiple2:
     done
 
 debug:
-    outfile=$(mktemp output-XXXX.json); aws lambda invoke --function-name docker-lambda-function --region ca-central-1 --payload '{}' $outfile; rm -f $outfile
+    outfile=$(mktemp output-XXXX.json); aws lambda invoke --function-name docker-lambda-function --region {{ AWS_REGION }}  --payload '{}' $outfile; rm -f $outfile
+
+# https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
+kms-fix:
+    #!/usr/bin/env bash
+    set -e
+
+    FUNCTION_NAME="docker-lambda-function"
+    REGION={{ AWS_REGION }}
+
+    CURRENT_ROLE=$(aws --region $REGION lambda get-function-configuration --function-name $FUNCTION_NAME | jq -r '.Role')
+    TEMP_ROLE="${CURRENT_ROLE%-role}"-temp-role""
+    TEMP_ROLE_NAME=$(basename $TEMP_ROLE)
+
+    aws iam create-role \
+        --role-name "$TEMP_ROLE_NAME" \
+        --assume-role-policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+            "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }]
+        }'
+
+    aws iam attach-role-policy \
+        --role-name "$TEMP_ROLE_NAME" \
+        --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+    sleep 10
+
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --role $TEMP_ROLE
+    sleep 10
+
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --role $CURRENT_ROLE
+    sleep 10
+
+    aws iam detach-role-policy \
+        --role-name "$TEMP_ROLE_NAME" \
+        --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+    aws iam delete-role --role-name "$TEMP_ROLE_NAME"
+
+# https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
+kms-fix2:
+    #!/usr/bin/env bash
+    set -e
+    set -x
+
+    FUNCTION_NAME="docker-lambda-function"
+    REGION={{ AWS_REGION }}
+
+    CURRENT_KEY=$(aws --region $REGION lambda get-function-configuration --function-name $FUNCTION_NAME | jq -r '.KMSKeyArn')
+
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --kms-key-arn ""
+    sleep 10
+
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --kms-key-arn "$CURRENT_KEY"
+    sleep 10
+
+# https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
+kms-fix3:
+    #!/usr/bin/env bash
+    set -e
+    set -x
+
+    FUNCTION_NAME="docker-lambda-function"
+    REGION="{{ AWS_REGION }}"
+    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+    # Step 1: Switch to default KMS key
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --kms-key-arn ""
+    sleep 10
+
+    # Step 2: Reset the role
+    CURRENT_ROLE=$(aws --region $REGION lambda get-function-configuration --function-name $FUNCTION_NAME | jq -r '.Role')
+    TEMP_ROLE="${CURRENT_ROLE%-role}"-temp-role""
+    TEMP_ROLE_NAME=$(basename $TEMP_ROLE)
+
+    aws iam create-role \
+        --role-name "$TEMP_ROLE_NAME" \
+        --assume-role-policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+            "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }]
+        }'
+
+    aws iam put-role-policy \
+        --role-name "$TEMP_ROLE_NAME" \
+        --policy-name "ECRAccess" \
+        --policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "kms:Decrypt",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+            }
+        ]
+        }'
+
+    sleep 10
+
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --role $TEMP_ROLE
+    sleep 10
+
+    aws --region $REGION lambda update-function-configuration --function-name $FUNCTION_NAME --role $CURRENT_ROLE
+    sleep 10
+
+    # Step 3: Clean up
+    aws iam delete-role-policy --role-name "$TEMP_ROLE_NAME" --policy-name "ECRAccess"
+    aws iam delete-role --role-name "$TEMP_ROLE_NAME"
+
+    # Step 4: Force new deployment
+    IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/lambda-docker-repo:latest"
+    aws --region $REGION lambda update-function-code --function-name $FUNCTION_NAME --image-uri $IMAGE_URI
+
+check-quotas:
+    #!/bin/bash
+
+    REGION="{{ AWS_REGION }}"
+    FUNCTION_NAME="docker-lambda-function"
+
+    # Cross-platform date command for both macOS and Linux
+    get_past_time() {
+    minutes=$1
+    if date -v-${minutes}M &>/dev/null; then
+        # macOS
+        date -u -v-${minutes}M '+%Y-%m-%dT%H:%M:%SZ'
+    else
+        # Linux
+        date -u -d "${minutes} minutes ago" '+%Y-%m-%dT%H:%M:%SZ'
+    fi
+    }
+
+    echo "Checking Lambda quotas and limits..."
+
+    # Check Lambda concurrent executions usage
+    echo -e "\nLambda Concurrent Executions:"
+    aws lambda get-account-settings --region $REGION --query 'AccountLimit.{ConcurrentExecutions:ConcurrentExecutions,UnreservedConcurrentExecutions:UnreservedConcurrentExecutions}'
+
+    # Check Lambda throttling
+    echo -e "\nLambda throttling in the last hour:"
+    aws cloudwatch get-metric-statistics \
+    --namespace AWS/Lambda \
+    --metric-name Throttles \
+    --dimensions Name=FunctionName,Value=$FUNCTION_NAME \
+    --start-time $(get_past_time 60) \
+    --end-time $(date -u '+%Y-%m-%dT%H:%M:%SZ') \
+    --period 3600 \
+    --statistics Sum \
+    --region $REGION
+
+    # Check recent API calls to Lambda service
+    echo -e "\nRecent Lambda API calls (last 15 minutes):"
+    aws cloudtrail lookup-events \
+    --region $REGION \
+    --lookup-attributes AttributeKey=ResourceName,AttributeValue=$FUNCTION_NAME \
+    --start-time $(get_past_time 15) \
+    --query 'Events[].{Time:EventTime,Action:EventName}' \
+    --output table
+
+    # Check IAM API throttling events
+    echo -e "\nRecent IAM API throttling events (last 15 minutes):"
+    aws cloudtrail lookup-events \
+    --region $REGION \
+    --start-time $(get_past_time 15) \
+    --query 'Events[?ErrorCode!=`null`].{Time:EventTime,Action:EventName,Error:ErrorCode,Message:ErrorMessage}' \
+    --output table
 
 apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 

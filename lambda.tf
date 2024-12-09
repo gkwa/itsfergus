@@ -77,7 +77,7 @@ resource "time_sleep" "wait_for_role" {
     aws_iam_role_policy_attachment.lambda_basic
   ]
 
-  create_duration = "20s"
+  create_duration = "30s"
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {

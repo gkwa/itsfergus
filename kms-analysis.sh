@@ -25,8 +25,8 @@ while IFS= read -r key_id; do
     key_info=$(aws kms describe-key --key-id "$key_id")
 
     # Get alias if it exists
-    alias=$(aws kms list-aliases --key-id "$key_id" --output json | \
-            jq -r '.Aliases[0].AliasName // "No alias"')
+    alias=$(aws kms list-aliases --key-id "$key_id" --output json |
+        jq -r '.Aliases[0].AliasName // "No alias"')
 
     # Get creation date
     creation_date=$(echo "$key_info" | jq -r '.KeyMetadata.CreationDate')
@@ -50,6 +50,6 @@ while IFS= read -r key_id; do
         "$formatted_last_used" \
         "$description"
 
-done <<< "$keys"
+done <<<"$keys"
 
 echo -e "\nDone!"

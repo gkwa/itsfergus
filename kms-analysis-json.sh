@@ -18,8 +18,8 @@ while IFS= read -r key_id; do
     key_info=$(aws kms describe-key --key-id "$key_id")
 
     # Get alias
-    alias=$(aws kms list-aliases --key-id "$key_id" --output json | \
-            jq -r '.Aliases[0].AliasName // "No alias"')
+    alias=$(aws kms list-aliases --key-id "$key_id" --output json |
+        jq -r '.Aliases[0].AliasName // "No alias"')
 
     # Get last used info using correct API call
     last_used_info=$(aws kms GetKeyLastUsed --key-id "$key_id" --output json 2>/dev/null || echo '{"LastUsedDate": null}')
@@ -40,6 +40,6 @@ while IFS= read -r key_id; do
             keyManager: $key_info.KeyMetadata.KeyManager,
             lastUsed: $last_used.LastUsedDate
         }'
-done <<< "$keys"
+done <<<"$keys"
 
 echo "]"
