@@ -108,80 +108,10 @@ apitestpython-iam: _install-recur
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
 test-multiple-iam:
-    #!/usr/bin/env bash
-    set -e
-    logfile="test-multiple-iam-$(date +%Y%m%d-%H%M%S).log"
-    echo "Starting test run at $(date -u)" > "$logfile"
-
-    # Get sleep duration from environment variable, default to 0
-    SLEEP_TIME=${SLEEP_TIME:-20}
-    echo "Using sleep time of ${SLEEP_TIME} seconds" | tee -a "$logfile"
-
-    for i in {1..10}; do
-        echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
-
-        echo "Grants before iteration $i:" | tee -a "$logfile"
-        ./check-kms-grants.sh >> "$logfile" 2>&1
-
-        if ! (just teardown setup-iam); then
-            echo "Failed at iteration $i at $(date -u)" | tee -a "$logfile"
-            echo "Final grant state:" | tee -a "$logfile"
-            ./check-kms-grants.sh >> "$logfile" 2>&1
-            echo "Running debug:" | tee -a "$logfile"
-            just debug >> "$logfile" 2>&1
-            exit 1
-        fi
-
-        echo "Iteration $i succeeded" | tee -a "$logfile"
-
-        echo "Grants after iteration $i:" | tee -a "$logfile"
-        ./check-kms-grants.sh >> "$logfile" 2>&1
-
-        if [ "$SLEEP_TIME" -gt 0 ]; then
-            echo "Sleeping for ${SLEEP_TIME} seconds..." | tee -a "$logfile"
-            sleep "$SLEEP_TIME"
-        fi
-    done
-
-    echo "All iterations completed successfully at $(date -u)" | tee -a "$logfile"
+    ./test-iam.sh
 
 test-multiple-key:
-    #!/usr/bin/env bash
-    set -e
-    logfile="test-multiple-key-$(date +%Y%m%d-%H%M%S).log"
-    echo "Starting test run at $(date -u)" > "$logfile"
-
-    # Get sleep duration from environment variable, default to 0
-    SLEEP_TIME=${SLEEP_TIME:-20}
-    echo "Using sleep time of ${SLEEP_TIME} seconds" | tee -a "$logfile"
-
-    for i in {1..10}; do
-        echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
-
-        echo "Grants before iteration $i:" | tee -a "$logfile"
-        ./check-kms-grants.sh >> "$logfile" 2>&1
-
-        if ! (just teardown setup-key); then
-            echo "Failed at iteration $i at $(date -u)" | tee -a "$logfile"
-            echo "Final grant state:" | tee -a "$logfile"
-            ./check-kms-grants.sh >> "$logfile" 2>&1
-            echo "Running debug:" | tee -a "$logfile"
-            just debug >> "$logfile" 2>&1
-            exit 1
-        fi
-
-        echo "Iteration $i succeeded" | tee -a "$logfile"
-
-        echo "Grants after iteration $i:" | tee -a "$logfile"
-        ./check-kms-grants.sh >> "$logfile" 2>&1
-
-        if [ "$SLEEP_TIME" -gt 0 ]; then
-            echo "Sleeping for ${SLEEP_TIME} seconds..." | tee -a "$logfile"
-            sleep "$SLEEP_TIME"
-        fi
-    done
-
-    echo "All iterations completed successfully at $(date -u)" | tee -a "$logfile"
+    ./test-key.sh
 
 test-multiple-iam2:
     #!/usr/bin/env bash
