@@ -14,15 +14,24 @@ _init-tf:
 _tf-init-ecr: _init-tf
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo
 
-setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (init-env "iam") apitest-iam
+recur-apitest-iam: _install-recur
+    #!/usr/bin/env bash
+    recur --verbose --timeout 2s --attempts 4 --backoff 3s just apitest-iam
 
-setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (init-env "key") apitest-key
+recur-apitest-key: _install-recur
+    #!/usr/bin/env bash
+    recur --verbose --timeout 2s --attempts 4 --backoff 3s just apitest-key
+
+setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (init-env "iam") recur-apitest-iam
+
+setup-key: _install-recur _tf-init-ecr _docker-build _tf-apply-key (init-env "key") recur-apitest-key
 
 destroy-iam: _init-tf _tf-destroy-iam
 
 destroy-key: _init-tf _tf-destroy-key
 
 cleanup-kms-grants:
+    ./check-kms-grants.sh
     ./cleanup_kms_grants.sh
     ./check-kms-grants.sh
 
@@ -98,29 +107,106 @@ apitestpython-iam: _install-recur
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
-iam-test-multiple:
+test-multiple-iam:
     #!/usr/bin/env bash
     set -e
-    >iam-test.multiple.log
+    logfile="test-multiple-iam-$(date +%Y%m%d-%H%M%S).log"
+    echo "Starting test run at $(date -u)" > "$logfile"
+
+    # Get sleep duration from environment variable, default to 0
+    SLEEP_TIME=${SLEEP_TIME:-20}
+    echo "Using sleep time of ${SLEEP_TIME} seconds" | tee -a "$logfile"
+
     for i in {1..10}; do
+        echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
+
+        echo "Grants before iteration $i:" | tee -a "$logfile"
+        ./check-kms-grants.sh >> "$logfile" 2>&1
+
         if ! (just teardown setup-iam); then
-            just debug
+            echo "Failed at iteration $i at $(date -u)" | tee -a "$logfile"
+            echo "Final grant state:" | tee -a "$logfile"
+            ./check-kms-grants.sh >> "$logfile" 2>&1
+            echo "Running debug:" | tee -a "$logfile"
+            just debug >> "$logfile" 2>&1
             exit 1
         fi
-        echo $i >iam-test.multiple.log
+
+        echo "Iteration $i succeeded" | tee -a "$logfile"
+
+        echo "Grants after iteration $i:" | tee -a "$logfile"
+        ./check-kms-grants.sh >> "$logfile" 2>&1
+
+        if [ "$SLEEP_TIME" -gt 0 ]; then
+            echo "Sleeping for ${SLEEP_TIME} seconds..." | tee -a "$logfile"
+            sleep "$SLEEP_TIME"
+        fi
     done
 
-iam-test-multiple2:
+    echo "All iterations completed successfully at $(date -u)" | tee -a "$logfile"
+
+test-multiple-key:
     #!/usr/bin/env bash
     set -e
-    >iam-test.multiple2.log
+    logfile="test-multiple-key-$(date +%Y%m%d-%H%M%S).log"
+    echo "Starting test run at $(date -u)" > "$logfile"
+
+    # Get sleep duration from environment variable, default to 0
+    SLEEP_TIME=${SLEEP_TIME:-20}
+    echo "Using sleep time of ${SLEEP_TIME} seconds" | tee -a "$logfile"
+
+    for i in {1..10}; do
+        echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
+
+        echo "Grants before iteration $i:" | tee -a "$logfile"
+        ./check-kms-grants.sh >> "$logfile" 2>&1
+
+        if ! (just teardown setup-key); then
+            echo "Failed at iteration $i at $(date -u)" | tee -a "$logfile"
+            echo "Final grant state:" | tee -a "$logfile"
+            ./check-kms-grants.sh >> "$logfile" 2>&1
+            echo "Running debug:" | tee -a "$logfile"
+            just debug >> "$logfile" 2>&1
+            exit 1
+        fi
+
+        echo "Iteration $i succeeded" | tee -a "$logfile"
+
+        echo "Grants after iteration $i:" | tee -a "$logfile"
+        ./check-kms-grants.sh >> "$logfile" 2>&1
+
+        if [ "$SLEEP_TIME" -gt 0 ]; then
+            echo "Sleeping for ${SLEEP_TIME} seconds..." | tee -a "$logfile"
+            sleep "$SLEEP_TIME"
+        fi
+    done
+
+    echo "All iterations completed successfully at $(date -u)" | tee -a "$logfile"
+
+test-multiple-iam2:
+    #!/usr/bin/env bash
+    set -e
+    >test-multiple-iam2.log
     for i in {1..10}; do
         rm -f .env
         if ! (just setup-iam); then
             just debug
             exit 1
         fi
-        echo $i >iam-test.multiple2.log
+        echo $i >test-multiple-iam2.log
+    done
+
+test-multiple-key2:
+    #!/usr/bin/env bash
+    set -e
+    >test-multiple-key2.log
+    for i in {1..10}; do
+        rm -f .env
+        if ! (just setup-key); then
+            just debug
+            exit 1
+        fi
+        echo $i >test-multiple-key2.log
     done
 
 debug:
@@ -144,6 +230,8 @@ kms-fix3:
 
 check-quotas:
     ./check-quotas.sh
+
+s1-iam: cleanup-kms-grants teardown setup-iam
 
 apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
 
@@ -182,5 +270,11 @@ check-all-kms-grants:
 
 check-kms-grants:
     ./check-kms-grants.sh
+
+check-kms-metrics duration="5m" timezone="America/Los_Angeles":
+    ./check-kms-metrics.sh {{ duration }} {{ timezone }}
+
+check-api-throttling duration="5m":
+    ./check-api-throttling.sh {{ duration }}
 
 teardown: _remove_dot_env _cleanup_kms_grants destroy-iam destroy-key

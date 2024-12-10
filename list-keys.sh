@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-duration=${1:-12h}
+
+duration=${1:-10m}
 num=${duration%[hm]}
 unit=${duration#${num}}
 
