@@ -26,7 +26,6 @@ run_test() {
 
     for i in {1..100}; do
         echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
-        curl -d "Iteration $i starting" ntfy.sh/mtmonacelli-itsfergus
         echo "Grants before iteration $i:" | tee -a "$logfile"
         ./check-kms-grants.sh >>"$logfile" 2>&1
 
@@ -57,6 +56,7 @@ run_test() {
             exit 1
         fi
 
+        curl -d "Iteration $i succeeded" ntfy.sh/mtmonacelli-itsfergus
         echo "Iteration $i succeeded" | tee -a "$logfile"
         echo "Grants after iteration $i:" | tee -a "$logfile"
         ./check-kms-grants.sh >>"$logfile" 2>&1
