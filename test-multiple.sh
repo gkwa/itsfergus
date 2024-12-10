@@ -26,11 +26,30 @@ run_test() {
 
     for i in {1..100}; do
         echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
+        curl -d "Iteration $i starting" ntfy.sh/mtmonacelli-itsfergus
         echo "Grants before iteration $i:" | tee -a "$logfile"
         ./check-kms-grants.sh >>"$logfile" 2>&1
 
-        if ! (just teardown setup-${setup_type}); then
-            echo "Failed at iteration $i at $(date -u)" | tee -a "$logfile"
+        # First teardown
+        if ! just teardown; then
+            echo "Failed at iteration $i during teardown at $(date -u)" | tee -a "$logfile"
+            echo "Final grant state:" | tee -a "$logfile"
+            ./check-kms-grants.sh >>"$logfile" 2>&1
+            echo "Running debug:" | tee -a "$logfile"
+            just debug >>"$logfile" 2>&1
+            exit 1
+        fi
+
+        # Then sleep
+        if [ "$SLEEP_TIME" -gt 0 ]; then
+            formatted_time=$(format_sleep_time "$SLEEP_TIME")
+            echo "Sleeping for ${formatted_time}..." | tee -a "$logfile"
+            sleep "$SLEEP_TIME"
+        fi
+
+        # Finally setup
+        if ! just setup-${setup_type}; then
+            echo "Failed at iteration $i during setup at $(date -u)" | tee -a "$logfile"
             echo "Final grant state:" | tee -a "$logfile"
             ./check-kms-grants.sh >>"$logfile" 2>&1
             echo "Running debug:" | tee -a "$logfile"
@@ -41,12 +60,6 @@ run_test() {
         echo "Iteration $i succeeded" | tee -a "$logfile"
         echo "Grants after iteration $i:" | tee -a "$logfile"
         ./check-kms-grants.sh >>"$logfile" 2>&1
-
-        if [ "$SLEEP_TIME" -gt 0 ]; then
-            formatted_time=$(format_sleep_time "$SLEEP_TIME")
-            echo "Sleeping for ${formatted_time}..." | tee -a "$logfile"
-            sleep "$SLEEP_TIME"
-        fi
     done
 
     echo "All iterations completed successfully at $(date -u)" | tee -a "$logfile"
