@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-REGION=ca-central-1
+REGION=${REGION:-ca-central-1}
 FUNCTION_NAME=docker-lambda-function
 
 # Cross-platform date command for both macOS and Linux

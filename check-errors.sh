@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Usage function
 usage() {
     echo "Usage: $0 -d <duration> [-r <region>]"
     echo "Duration format: <number>[m|h] (e.g., 20m for 20 minutes, 1h for 1 hour)"
@@ -8,7 +7,6 @@ usage() {
     exit 1
 }
 
-# Parse command line arguments
 while getopts "d:r:h" opt; do
     case $opt in
     d) DURATION="$OPTARG" ;;
@@ -18,12 +16,10 @@ while getopts "d:r:h" opt; do
     esac
 done
 
-# Check if duration is provided
 if [ -z "$DURATION" ]; then
     usage
 fi
 
-# Set default region if not specified
 REGION=${REGION:-ca-central-1}
 
 # Extract number and unit from duration

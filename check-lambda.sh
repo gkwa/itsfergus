@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-PAGER=cat aws lambda list-functions --region ca-central-1 --query 'Functions[*].FunctionName'
+export PAGER=cat
+
+REGION=${REGION:-ca-central-1}
+
+aws lambda list-functions --region $REGION --query 'Functions[*].FunctionName'

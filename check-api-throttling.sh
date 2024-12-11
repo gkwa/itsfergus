@@ -2,6 +2,7 @@
 set -euo pipefail
 
 TIMESPAN=${1:-5m}
+REGION=${AWS_REGION:-ca-central-1}
 export PAGER=cat
 
 # Parse timespan into minutes
@@ -23,14 +24,14 @@ start_time=$(date -u -d "$MINUTES minutes ago" '+%Y-%m-%dT%H:%M:%SZ')
 echo "Checking for API throttling events in the last $TIMESPAN..."
 
 aws cloudtrail lookup-events \
-    --region ca-central-1 \
+    --region $REGION \
     --start-time "$start_time" \
     --lookup-attributes AttributeKey=EventName,AttributeValue=CreateFunction \
     --query 'Events[?ErrorCode!=`null`].{Time:EventTime,Action:EventName,Error:ErrorCode,Message:ErrorMessage}' \
     --output table
 
 aws cloudtrail lookup-events \
-    --region ca-central-1 \
+    --region $REGION \
     --start-time "$start_time" \
     --lookup-attributes AttributeKey=EventName,AttributeValue=CreateRestApi \
     --query 'Events[?ErrorCode!=`null`].{Time:EventTime,Action:EventName,Error:ErrorCode,Message:ErrorMessage}' \

@@ -5,22 +5,24 @@
 FUNCTION_NAME=docker-lambda-function
 REGION=ca-central-1
 
+export PAGER=cat
+
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 # Step 1: Switch to default KMS key
-PAGER=cat aws --region $REGION lambda update-function-configuration \
+aws --region $REGION lambda update-function-configuration \
     --function-name $FUNCTION_NAME --kms-key-arn ""
 sleep 10
 
 # Step 2: Reset the role
 CURRENT_ROLE=$(
     aws --region $REGION lambda get-function-configuration \
-        --function-name $FUNCTION_NAME | jq -r '.Role'
+        --function-name $FUNCTION_NAME | jq -r .Role
 )
 TEMP_ROLE="${CURRENT_ROLE%-role}"-temp-role""
 TEMP_ROLE_NAME=$(basename $TEMP_ROLE)
 
-PAGER=cat aws iam create-role \
+aws iam create-role \
     --role-name "$TEMP_ROLE_NAME" \
     --assume-role-policy-document '{
     "Version": "2012-10-17",
@@ -33,7 +35,7 @@ PAGER=cat aws iam create-role \
     }]
     }'
 
-PAGER=cat aws iam put-role-policy \
+aws iam put-role-policy \
     --role-name "$TEMP_ROLE_NAME" \
     --policy-name "ECRAccess" \
     --policy-document '{
@@ -58,19 +60,19 @@ PAGER=cat aws iam put-role-policy \
 
 sleep 10
 
-PAGER=cat aws --region $REGION lambda update-function-configuration \
+aws --region $REGION lambda update-function-configuration \
     --function-name $FUNCTION_NAME --role $TEMP_ROLE
 sleep 10
 
-PAGER=cat aws --region $REGION lambda update-function-configuration \
+aws --region $REGION lambda update-function-configuration \
     --function-name $FUNCTION_NAME --role $CURRENT_ROLE
 sleep 10
 
 # Step 3: Clean up
-PAGER=cat aws iam delete-role-policy --role-name "$TEMP_ROLE_NAME" --policy-name "ECRAccess"
-PAGER=cat aws iam delete-role --role-name "$TEMP_ROLE_NAME"
+aws iam delete-role-policy --role-name "$TEMP_ROLE_NAME" --policy-name "ECRAccess"
+aws iam delete-role --role-name "$TEMP_ROLE_NAME"
 
 # Step 4: Force new deployment
 IMAGE_URI="$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/lambda-docker-repo:latest"
-PAGER=cat aws --region $REGION lambda update-function-code \
+aws --region $REGION lambda update-function-code \
     --function-name $FUNCTION_NAME --image-uri $IMAGE_URI
