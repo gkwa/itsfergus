@@ -3,7 +3,7 @@ output "api_gateway_url" {
 }
 
 output "api_invocation_role_arn" {
-  value = aws_iam_role.api_invocation_role.arn
+  value = var.lambda_role_arn
 }
 
 output "api_gateway_execution_arn" {

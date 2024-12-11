@@ -1,5 +1,5 @@
-resource "aws_iam_role" "lambda_role" {
-  name = "lambda_role"
+resource "aws_iam_role" "lambda_api_role" {
+  name = "lambda_api_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -8,17 +8,23 @@ resource "aws_iam_role" "lambda_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "lambda.amazonaws.com"
+          Service = ["lambda.amazonaws.com", "apigateway.amazonaws.com"]
+        }
+      },
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = data.aws_caller_identity.current.arn
         }
       }
     ]
   })
 }
 
-# Consolidated policy for Lambda including ECR and KMS permissions
-resource "aws_iam_role_policy" "lambda_consolidated_policy" {
-  name = "lambda_consolidated_policy"
-  role = aws_iam_role.lambda_role.id
+resource "aws_iam_role_policy" "lambda_ecr_policy" {
+  name = "lambda_ecr_policy"
+  role = aws_iam_role.lambda_api_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -33,7 +39,18 @@ resource "aws_iam_role_policy" "lambda_consolidated_policy" {
           "ecr:DescribeImages"
         ]
         Resource = "*"
-      },
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_kms_policy" {
+  name = "lambda_kms_policy"
+  role = aws_iam_role.lambda_api_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       {
         Effect = "Allow"
         Action = [
@@ -46,10 +63,22 @@ resource "aws_iam_role_policy" "lambda_consolidated_policy" {
           "kms:ReEncrypt*"
         ]
         Resource = [
+          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/*",
           "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alias/aws/ecr",
-          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:key/*"
+          "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alias/aws/lambda"
         ]
-      },
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_logs_policy" {
+  name = "lambda_logs_policy"
+  role = aws_iam_role.lambda_api_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       {
         Effect = "Allow"
         Action = [
@@ -63,17 +92,38 @@ resource "aws_iam_role_policy" "lambda_consolidated_policy" {
   })
 }
 
-# Attach AWS Lambda basic execution role
+resource "aws_iam_role_policy" "lambda_api_policy" {
+  name = "lambda_api_policy"
+  role = aws_iam_role.lambda_api_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction",
+          "execute-api:Invoke",
+          "execute-api:ManageConnections"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_role.name
+  role       = aws_iam_role.lambda_api_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Add a time delay to allow IAM role propagation
 resource "time_sleep" "wait_for_role" {
   depends_on = [
-    aws_iam_role.lambda_role,
-    aws_iam_role_policy.lambda_consolidated_policy,
+    aws_iam_role.lambda_api_role,
+    aws_iam_role_policy.lambda_ecr_policy,
+    aws_iam_role_policy.lambda_kms_policy,
+    aws_iam_role_policy.lambda_logs_policy,
+    aws_iam_role_policy.lambda_api_policy,
     aws_iam_role_policy_attachment.lambda_basic
   ]
 
@@ -87,7 +137,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 
 resource "aws_lambda_function" "app" {
   function_name = var.lambda_function_name
-  role          = aws_iam_role.lambda_role.arn
+  role          = aws_iam_role.lambda_api_role.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.app_repo.repository_url}:latest"
 

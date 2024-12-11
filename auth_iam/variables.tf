@@ -12,3 +12,8 @@ variable "aws_region" {
   type        = string
   description = "AWS region to deploy to"
 }
+
+variable "lambda_role_arn" {
+  type        = string
+  description = "ARN of the Lambda role"
+}

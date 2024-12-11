@@ -9,6 +9,7 @@ module "auth_iam" {
   aws_lambda_function_arn  = try(aws_lambda_function.app.arn, "")
   aws_lambda_function_name = var.lambda_function_name
   aws_region               = var.aws_region
+  lambda_role_arn          = aws_iam_role.lambda_api_role.arn
 }
 
 module "auth_key" {
