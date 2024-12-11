@@ -21,10 +21,11 @@ run_test() {
     logfile="test-multiple-${setup_type}-$(date +%Y%m%d-%H%M%S).log"
     echo "Starting test run at $(date -u)" >"$logfile"
 
+    MAX_TESTS=100
     SLEEP_TIME=${SLEEP_TIME:-$default_sleep}
     echo "Using sleep time of ${SLEEP_TIME} seconds" | tee -a "$logfile"
 
-    for i in {1..100}; do
+    for i in {1..$MAX_TESTS}; do
         echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
         echo "Grants before iteration $i:" | tee -a "$logfile"
         ./check-kms-grants.sh >>"$logfile" 2>&1
@@ -42,7 +43,7 @@ run_test() {
         # Then sleep
         if [ "$SLEEP_TIME" -gt 0 ]; then
             formatted_time=$(format_sleep_time "$SLEEP_TIME")
-            echo "Sleeping for ${formatted_time}..." | tee -a "$logfile"
+            echo "Sleeping for ${formatted_time}... in round ${i}" | tee -a "$logfile"
             sleep "$SLEEP_TIME"
         fi
 

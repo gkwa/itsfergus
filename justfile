@@ -144,45 +144,18 @@ apitestpython-iam: _install-recur
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
-test-multiple-iam:
+test-mutliple test_type:
     #!/usr/bin/env bash
     set -euo pipefail ${DEBUG:+-x}
 
-    bash -euo pipefail ${DEBUG:+-x} test-iam.sh
+    source test-multiple.sh
 
-test-multiple-iam2:
-    #!/usr/bin/env bash
-    set -euo pipefail ${DEBUG:+-x}
+    SLEEP_TIME_SECONDS=$(units --terse 8min sec)
+    run_test {{ test_type }} $SLEEP_TIME_SECONDS
 
-    >test-multiple-iam2.log
-    for i in {1..10}; do
-        rm -f .env
-        if ! (just setup-iam); then
-            just debug
-            exit 1
-        fi
-        echo $i >test-multiple-iam2.log
-    done
+test-multiple-key: (test-mutliple "key")
 
-test-multiple-key:
-    #!/usr/bin/env bash
-    set -euo pipefail ${DEBUG:+-x}
-
-    bash -euo pipefail ${DEBUG:+-x} test-key.sh
-
-test-multiple-key2:
-    #!/usr/bin/env bash
-    set -euo pipefail ${DEBUG:+-x}
-
-    >test-multiple-key2.log
-    for i in {1..10}; do
-        rm -f .env
-        if ! (just setup-key); then
-            just debug
-            exit 1
-        fi
-        echo $i >test-multiple-key2.log
-    done
+test-multiple-iam: (test-mutliple "iam")
 
 debug:
     #!/usr/bin/env bash
