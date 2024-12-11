@@ -1,25 +1,33 @@
+set shell := ["bash", "-uec"]
 set export := true
 
 AWS_PROFILE := env_var_or_default("AWS_PROFILE", "default")
 AWS_REGION := env_var_or_default("AWS_REGION", "ca-central-1")
 ECR_REPO := "lambda-docker-repo"
 LAMBDA_NAME := "docker-lambda-function"
+DEBUG := env_var_or_default("ITSFERGUS_DEBUG", "")
 
 default:
     @just --list
 
 _init-tf:
+    set -euo pipefail ${DEBUG:+-x}
     terraform init -upgrade
 
 _tf-init-ecr: _init-tf
+    set -euo pipefail ${DEBUG:+-x}
     terraform apply -auto-approve -target=aws_ecr_repository.app_repo
 
 recur-apitest-iam: _install-recur
     #!/usr/bin/env bash
+
+    set -euo pipefail ${DEBUG:+-x}
     recur --verbose --timeout 2s --attempts 4 --backoff 3s just apitest-iam
 
 recur-apitest-key: _install-recur
     #!/usr/bin/env bash
+
+    set -euo pipefail ${DEBUG:+-x}
     recur --verbose --timeout 2s --attempts 4 --backoff 3s just apitest-key
 
 setup-iam: _install-recur _tf-init-ecr _docker-build _tf-apply-iam (init-env "iam") recur-apitest-iam
@@ -31,19 +39,22 @@ destroy-iam: _init-tf _tf-destroy-iam
 destroy-key: _init-tf _tf-destroy-key
 
 cleanup-kms-grants:
-    ./check-kms-grants.sh
-    ./cleanup_kms_grants.sh
-    ./check-kms-grants.sh
+    bash ${DEBUG:+-x} check-kms-grants.sh
+    bash ${DEBUG:+-x} cleanup_kms_grants.sh
+    bash ${DEBUG:+-x} check-kms-grants.sh
 
 _install-recur:
     #!/usr/bin/env bash
+
+    set -euo pipefail ${DEBUG:+-x}
     if ! command -v recur >/dev/null 2>&1; then
         GOBIN=/usr/local/bin go install github.com/dbohdan/recur/v2@latest
     fi
 
 _docker-build:
     #!/usr/bin/env bash
-    set -euo pipefail
+    set -euo pipefail ${DEBUG:+-x}
+
     AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
     aws ecr get-login-password --region {{ AWS_REGION }} | \
         docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.{{ AWS_REGION }}.amazonaws.com
@@ -53,8 +64,8 @@ _docker-build:
 
 init-env AUTH_TYPE:
     #!/usr/bin/env bash
-    set -euo pipefail
-    set -x
+
+    set -euo pipefail ${DEBUG:+-x}
     if [ ! -f .env ]; then
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         if [ "{{ AUTH_TYPE }}" = "iam" ]; then
@@ -79,15 +90,19 @@ init-env AUTH_TYPE:
     fi
 
 _tf-apply-iam:
+    set -euo pipefail ${DEBUG:+-x}
     terraform apply -auto-approve -var="auth_type=iam"
 
 _tf-apply-key:
+    set -euo pipefail ${DEBUG:+-x}
     terraform apply -auto-approve -var="auth_type=key"
 
 _tf-destroy-iam:
+    set -euo pipefail ${DEBUG:+-x}
     terraform destroy -auto-approve -var="auth_type=iam"
 
 _tf-destroy-key:
+    set -euo pipefail ${DEBUG:+-x}
     terraform destroy -auto-approve -var="auth_type=key"
 
 _remove_dot_env:
@@ -95,6 +110,8 @@ _remove_dot_env:
 
 apitestpython-key: _install-recur
     #!/usr/bin/env bash
+    set -euo pipefail ${DEBUG:+-x}
+
     set -a; source .env; set +a
     uv sync --quiet
     . .venv/bin/activate
@@ -102,20 +119,23 @@ apitestpython-key: _install-recur
 
 apitestpython-iam: _install-recur
     #!/usr/bin/env bash
+    set -euo pipefail ${DEBUG:+-x}
+
     set -a; source .env; set +a
     uv sync --quiet
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
 test-multiple-iam:
-    ./test-iam.sh
+    bash ${DEBUG:+-x} test-iam.sh
 
 test-multiple-key:
-    ./test-key.sh
+    bash ${DEBUG:+-x} test-key.sh
 
 test-multiple-iam2:
     #!/usr/bin/env bash
-    set -e
+    set -euo pipefail ${DEBUG:+-x}
+
     >test-multiple-iam2.log
     for i in {1..10}; do
         rm -f .env
@@ -128,7 +148,8 @@ test-multiple-iam2:
 
 test-multiple-key2:
     #!/usr/bin/env bash
-    set -e
+    set -euo pipefail ${DEBUG:+-x}
+
     >test-multiple-key2.log
     for i in {1..10}; do
         rm -f .env
@@ -141,25 +162,26 @@ test-multiple-key2:
 
 debug:
     #!/usr/bin/env bash
-    REGION={{ AWS_REGION }}
+    set -euo pipefail ${DEBUG:+-x}
 
-    set -e
-    outfile=$(mktemp output-XXXX.json); aws lambda invoke --function-name docker-lambda-function --region $REGION --payload '{}' $outfile; rm -f $outfile
+    outfile=$(mktemp output-XXXX.json) && \
+        aws lambda invoke --function-name docker-lambda-function \
+            --region {{ AWS_REGION }} --payload '{}' $outfile; rm -f $outfile
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix:
-    ./kms-fix.sh
+    bash ${DEBUG:+-x} kms-fix.sh
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix2:
-    ./kms-fix2.sh
+    bash ${DEBUG:+-x} kms-fix2.sh
 
 # https://repost.aws/knowledge-center/lambda-kmsaccessdeniedexception-errors
 kms-fix3:
-    ./kms-fix3.sh
+    bash ${DEBUG:+-x} kms-fix3.sh
 
 check-quotas:
-    ./check-quotas.sh
+    bash ${DEBUG:+-x} check-quotas.sh
 
 s1-iam: cleanup-kms-grants teardown setup-iam
 
@@ -169,22 +191,30 @@ apitest-key: apitesthurl-key apitestpython-key apitestbash-key
 
 apitesthurl-key: _install-recur
     #!/usr/bin/env bash
-    hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 --test --variables-file=.env apitest-key.hurl
+    set -euo pipefail ${DEBUG:+-x}
+    hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 \
+        --test --variables-file=.env apitest-key.hurl
 
 apitesthurl-iam:
     #!/usr/bin/env bash
-    hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 --test --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" --variables-file=.env apitest-iam.hurl
+    set -euo pipefail ${DEBUG:+-x}
+    hurl --connect-timeout=10 --retry=10 --jobs=1 --repeat=1 \
+        --test --variable "DateTime=$(date -u +%Y%m%dT%H%M%SZ)" \
+        --variables-file=.env apitest-iam.hurl
 
 apitestbash-key:
-    ./apitest-key.sh
+    bash ${DEBUG:+-x} apitest-key.sh
 
 apitestbash-iam:
-    ./apitest-iam.sh
+    bash ${DEBUG:+-x} apitest-iam.sh
 
 logs:
+    set -euo pipefail ${DEBUG:+-x}
     aws logs tail "/aws/lambda/{{ LAMBDA_NAME }}" --since 1h --follow
 
 fmt:
+    set -euo pipefail ${DEBUG:+-x}
+
     shfmt -w -s -i 4 *.sh
     terraform fmt -recursive .
     prettier --ignore-path=.prettierignore --config=.prettierrc.json --write .
@@ -193,18 +223,18 @@ fmt:
     just --unstable --fmt
 
 _cleanup_kms_grants:
-    ./cleanup_kms_grants.sh
+    bash ${DEBUG:+-x} cleanup_kms_grants.sh
 
 check-all-kms-grants:
-    ./check-all-kms-grants.sh
+    bash ${DEBUG:+-x} check-all-kms-grants.sh
 
 check-kms-grants:
-    ./check-kms-grants.sh
+    bash ${DEBUG:+-x} check-kms-grants.sh
 
 check-kms-metrics duration="5m" timezone="America/Los_Angeles":
-    ./check-kms-metrics.sh {{ duration }} {{ timezone }}
+    bash ${DEBUG:+-x} check-kms-metrics.sh {{ duration }} {{ timezone }}
 
 check-api-throttling duration="5m":
-    ./check-api-throttling.sh {{ duration }}
+    bash ${DEBUG:+-x} check-api-throttling.sh {{ duration }}
 
 teardown: _remove_dot_env _cleanup_kms_grants destroy-iam destroy-key
