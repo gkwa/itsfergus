@@ -277,29 +277,3 @@ check-api-throttling duration="5m":
     AWS_REGION={{ AWS_REGION }} bash -euo pipefail ${DEBUG:+-x} check-api-throttling.sh {{ duration }}
 
 teardown: _remove_dot_env _cleanup_kms_grants destroy-iam destroy-key
-
-send-message sqs_queue_url:
-    aws sqs send-message \
-        --queue-url {{ sqs_queue_url }} \
-        --message-body "Hello from SQS" \
-        --message-attributes '{"Title": {"DataType": "String","StringValue": "Test Message"}}' \
-        --region ca-central-1
-
-get-messages sqs_queue_url:
-    aws sqs receive-message \
-        --queue-url {{ sqs_queue_url }} \
-        --max-number-of-messages 10 \
-        --region ca-central-1
-
-purge-queue sqs_queue_url:
-    aws sqs purge-queue \
-        --queue-url {{ sqs_queue_url }} \
-        --region ca-central-1
-
-test-sqs sqs_queue_url: (send-message "{{sqs_queue_url}}") (get-messages "{{sqs_queue_url}}") (purge-queue "{{sqs_queue_url}}")
-
-setup-sqs:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    QUEUE_URL=$(terraform output -raw sqs_queue_url)
-    just test-sqs "$QUEUE_URL"
