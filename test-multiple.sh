@@ -25,7 +25,7 @@ run_test() {
     SLEEP_TIME=${SLEEP_TIME:-$default_sleep}
     echo "Using sleep time of ${SLEEP_TIME} seconds" | tee -a "$logfile"
 
-    for i in {1..$MAX_TESTS}; do
+    for i in $(seq 1 $MAX_TESTS); do
         echo -e "\n=== Iteration $i starting at $(date -u) ===" | tee -a "$logfile"
         echo "Grants before iteration $i:" | tee -a "$logfile"
         ./check-kms-grants.sh >>"$logfile" 2>&1
