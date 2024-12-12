@@ -26,3 +26,9 @@ variable "lambda_function_name" {
   type        = string
   default     = "docker-lambda-function"
 }
+
+variable "sqs_queue_url" {
+  description = "URL of the SQS queue"
+  type        = string
+  default     = "https://sqs.ca-central-1.amazonaws.com/193048895737/message-processing-queue"
+}

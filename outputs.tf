@@ -22,3 +22,7 @@ output "api_key" {
 output "api_invocation_role_arn" {
   value = try(local.auth_type == "iam" ? module.auth_iam[0].api_invocation_role_arn : null, null)
 }
+
+output "sqs_queue_arn" {
+  value = aws_sqs_queue.main_queue.arn
+}
