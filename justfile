@@ -144,14 +144,20 @@ apitestpython-iam: _install-recur
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
-test-mutliple test_type:
+test-mutliple test_type sleep_on_first_loop_yesno="yes":
     #!/usr/bin/env bash
+
+    # Save the current debug state before setting options
+    [[ $- == *x* ]] && DEBUG_ENABLED=true || DEBUG_ENABLED=false
+
     set -euo pipefail ${DEBUG:+-x}
 
     source test-multiple.sh
 
+    # Propagate debug state to the environment for the sourced script
+    export TRACE=${DEBUG_ENABLED}
     SLEEP_TIME_SECONDS=$(units --terse 8min sec)
-    run_test {{ test_type }} $SLEEP_TIME_SECONDS
+    run_test {{ test_type }} $SLEEP_TIME_SECONDS $sleep_on_first_loop_yesno
 
 test-multiple-key: (test-mutliple "key")
 
