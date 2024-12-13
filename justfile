@@ -144,7 +144,7 @@ apitestpython-iam: _install-recur
     . .venv/bin/activate
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
-test-mutliple test_type sleep_on_first_loop_yesno="yes":
+test-mutliple test_type sleep_on_first_loop_yesno="no":
     #!/usr/bin/env bash
 
     # Save the current debug state before setting options
@@ -197,6 +197,33 @@ check-quotas:
     set -euo pipefail ${DEBUG:+-x}
 
     bash -euo pipefail ${DEBUG:+-x} check-quotas.sh
+
+install-monitor:
+    rm -f /etc/cron.d/monitor-itsfergus
+    rm -f /root/monitor-itsfergus.sh
+
+    cat > /root/monitor-itsfergus.sh << 'EOF'
+    #!/bin/bash
+    pid_file="/root/itsfergus.pid"
+
+    if [ -f $pid_file ] && ! kill -0 $(cat $pid_file) 2>/dev/null; then
+        curl -d "process failed" ntfy.sh/mtmonacelli-itsfergus
+        rm /etc/cron.d/monitor-itsfergus
+    fi
+    EOF
+
+    cat > /etc/cron.d/monitor-itsfergus << 'EOF'
+    * * * * * root /root/monitor-itsfergus.sh
+
+    EOF
+    chmod +x /root/monitor-itsfergus.sh
+
+    cat /etc/cron.d/monitor-itsfergus
+    cat /root/monitor-itsfergus.sh
+
+    journalctl -u cron.service --follow
+
+
 
 s1-iam: cleanup-kms-grants teardown setup-iam
 
