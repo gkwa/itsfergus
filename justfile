@@ -178,11 +178,50 @@ test-mutliple test_type sleep_on_first_loop_yesno="no":
     SLEEP_TIME_SECONDS=$(units --terse 8min sec)
     run_test {{ test_type }} $SLEEP_TIME_SECONDS $sleep_on_first_loop_yesno
 
-[group('test')]
-test-multiple-key: (test-mutliple "key")
+[group('maint')]
+config:
+    #!/usr/bin/env bash
+    cat >/tmp/o1 <<'EOF1'
+    for f in ~/.profile ~/.bashrc; do
+        grep -q 'if command -v just' $f 2>/dev/null || cat >> $f << 'EOF'
+    if command -v just &>/dev/null; then eval "$(just --completions bash 2>/dev/null)"; fi
+    EOF
+    source ~/.profile
+    source ~/.bashrc
+    done
+
+    for f in ~/.profile ~/.bashrc; do
+        grep -q 'alias j=just' $f 2>/dev/null || cat >> $f << 'EOF'
+    alias j=just
+    EOF
+    source ~/.profile
+    source ~/.bashrc
+    done
+    EOF1
+
+[group('runner')]
+start-runner: config _start-runner install-monitor
+
+[group('runner')]
+_start-runner:
+    #!/usr/bin/env bash
+
+    cat >start-runner.sh<<'EOF'
+    #!/usr/bin/env bash
+
+    echo $$ >~/itsfergus.pid
+    for i in {1..10}; do
+        ITSFERGUS_DEBUG=1 just --timestamp test-multiple-iam
+    done
+    EOF
+    chmod +x start-runner.sh
+    nohup bash -x start-runner.sh &
 
 [group('test')]
-test-multiple-iam: (test-mutliple "iam")
+test-multiple-key: install-monitor (test-mutliple "key")
+
+[group('test')]
+test-multiple-iam: install-monitor (test-mutliple "iam")
 
 [group('debug')]
 debug:
@@ -226,7 +265,8 @@ check-quotas:
 
 [group('monitor')]
 check-monitor:
-    journalctl -u cron.service --follow
+    find /etc/cron.d/
+    journalctl --unit=cron.service --follow
 
 [group('monitor')]
 install-monitor:
@@ -236,11 +276,11 @@ install-monitor:
 
     cat > /root/monitor-itsfergus.sh << 'EOF'
     #!/bin/bash
-    pid_file="/root/itsfergus.pid"
+    pid_file=/root/itsfergus.pid
 
     if [ -f $pid_file ] && ! kill -0 $(cat $pid_file) 2>/dev/null; then
-        curl -d "process failed" ntfy.sh/mtmonacelli-itsfergus
-        rm /etc/cron.d/monitor-itsfergus
+        curl -d "process itsfergus failed" ntfy.sh/mtmonacelli-itsfergus
+        rm /etc/cron.d/monitor-itsfergus # only alert once
     fi
     EOF
 
@@ -250,8 +290,9 @@ install-monitor:
     EOF
     chmod +x /root/monitor-itsfergus.sh
 
-    cat /etc/cron.d/monitor-itsfergus
-    cat /root/monitor-itsfergus.sh
+    echo updated:
+    ls /etc/cron.d/monitor-itsfergus
+    ls /root/monitor-itsfergus.sh
 
 [group('test')]
 apitest-iam: apitesthurl-iam apitestpython-iam apitestbash-iam
