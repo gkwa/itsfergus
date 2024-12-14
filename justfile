@@ -163,7 +163,7 @@ apitestpython-iam: _install-recur
     recur --verbose --timeout 2s --attempts 10 --backoff 3s python apitest-iam.py
 
 [group('test')]
-test-mutliple test_type sleep_on_first_loop_yesno="no":
+test-multiple test_type sleep_on_first_loop_yesno="no":
     #!/usr/bin/env bash
 
     # Save the current debug state before setting options
@@ -218,10 +218,10 @@ _start-runner:
     nohup bash -x start-runner.sh &
 
 [group('test')]
-test-multiple-key: install-monitor (test-mutliple "key")
+test-multiple-key: install-monitor (test-multiple "key")
 
 [group('test')]
-test-multiple-iam: install-monitor (test-mutliple "iam")
+test-multiple-iam: install-monitor (test-multiple "iam")
 
 [group('debug')]
 debug:
