@@ -175,7 +175,7 @@ test-multiple test_type sleep_on_first_loop_yesno="no":
 
     # Propagate debug state to the environment for the sourced script
     export TRACE=${DEBUG_ENABLED}
-    SLEEP_TIME_SECONDS=$(units --terse 8min sec)
+    SLEEP_TIME_SECONDS=$(units --terse 10min sec)
     run_test {{ test_type }} $SLEEP_TIME_SECONDS $sleep_on_first_loop_yesno
 
 [group('maint')]
