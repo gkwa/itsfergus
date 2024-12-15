@@ -278,6 +278,7 @@ install-monitor:
     #!/bin/bash
     pid_file=/root/itsfergus.pid
 
+
     if [ -f $pid_file ] && ! kill -0 $(cat $pid_file) 2>/dev/null; then
         curl -d "process itsfergus failed" ntfy.sh/mtmonacelli-itsfergus
         rm /etc/cron.d/monitor-itsfergus # only alert once
