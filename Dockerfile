@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.13@sha256:507b85226a0cbc1e86701f2e5cf6ae4619134aa07f09f00622dab9186ef00bf9
+FROM public.ecr.aws/lambda/python:3.13@sha256:0b267232e8fa99b53c7d02c62f833bd84a71173c597553e39da87b24303c2d2d
 
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
 RUN pip install -r requirements.txt
